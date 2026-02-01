@@ -35,6 +35,10 @@ void saveConfig() {
     EEPROM.write(addr + 2, config.schedules[i].action);
   }
   
+  // Save power states
+  EEPROM.write(ADDR_POWER_JACK_STATE, config.powerJackState ? 1 : 0);
+  EEPROM.write(ADDR_USB_OUTPUT_STATE, config.usbOutputState ? 1 : 0);
+  
   EEPROM.commit();
   Serial.println(F("Config saved to EEPROM."));
 }
@@ -45,6 +49,8 @@ void loadConfig() {
     memset(&config, 0, sizeof(config));
     strcpy(config.timezone, "UTC");
     config.pdVoltage = 9;
+    config.powerJackState = false;
+    config.usbOutputState = false;
     return;
   }
   
@@ -79,6 +85,10 @@ void loadConfig() {
                                EEPROM.read(addr + 1);
     config.schedules[i].action = EEPROM.read(addr + 2);
   }
+  
+  // Load power states
+  config.powerJackState = EEPROM.read(ADDR_POWER_JACK_STATE) == 1;
+  config.usbOutputState = EEPROM.read(ADDR_USB_OUTPUT_STATE) == 1;
   
   Serial.println(F("Config loaded from EEPROM."));
 }

@@ -1,6 +1,6 @@
 #include "network.h"
 #include "storage.h"
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 #include <time.h>
 
 void connectWiFi() {

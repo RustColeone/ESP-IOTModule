@@ -2,10 +2,10 @@
 #include "hardware.h"
 #include "storage.h"
 #include "network.h"
-#include <ESP8266WebServer.h>
-#include <ESP8266WiFi.h>
+#include <WebServer.h>
+#include <WiFi.h>
 
-ESP8266WebServer server(80);
+WebServer server(80);
 
 // HTML page
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -213,7 +213,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <body>
   <div class="container">
     <h1>⚡ IOT Switch Control</h1>
-    <p class="subtitle">ESP8266 Power Management System</p>
+    <p class="subtitle">ESP32-C6 Dual Output Power Management System</p>
 
     <div class="section">
       <h2>📊 System Status 
@@ -227,16 +227,25 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     </div>
 
     <div class="section">
-      <h2>🔌 Power Control</h2>
+      <h2>🔌 Power Jack Control</h2>
       <div class="button-group">
-        <button class="btn-on" onclick="setPower(true)">⚡ Turn ON</button>
-        <button class="btn-off" onclick="setPower(false)">🔴 Turn OFF</button>
+        <button class="btn-on" onclick="setPowerJack(true)">⚡ Enable Jack</button>
+        <button class="btn-off" onclick="setPowerJack(false)">🔴 Disable Jack</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🔋 USB Output Control</h2>
+      <div class="button-group">
+        <button class="btn-on" onclick="setUSBOutput(true)">⚡ Enable USB</button>
+        <button class="btn-off" onclick="setUSBOutput(false)">🔴 Disable USB</button>
       </div>
     </div>
 
     <div class="section">
       <h2>⚙️ PD Voltage</h2>
       <div class="button-group">
+        <button class="btn-primary" onclick="setPD(5)">5V</button>
         <button class="btn-primary" onclick="setPD(9)">9V</button>
         <button class="btn-primary" onclick="setPD(12)">12V</button>
         <button class="btn-primary" onclick="setPD(15)">15V</button>
@@ -300,19 +309,31 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         .then(r => r.json())
         .then(data => {
           const grid = document.getElementById('statusGrid');
-          const powerClass = data.power ? 'power-on' : 'power-off';
-          const powerText = data.power ? 'ON' : 'OFF';
+          const jackClass = data.powerJack ? 'power-on' : 'power-off';
+          const jackText = data.powerJack ? 'ENABLED' : 'DISABLED';
+          const usbClass = data.usbOutput ? 'power-on' : 'power-off';
+          const usbText = data.usbOutput ? 'ENABLED' : 'DISABLED';
           
           grid.innerHTML = `
             <div class="status-item">
-              <div class="status-label">Power State</div>
+              <div class="status-label">Power Jack</div>
               <div class="status-value">
-                <span class="power-state ${powerClass}">${powerText}</span>
+                <span class="power-state ${jackClass}">${jackText}</span>
+              </div>
+            </div>
+            <div class="status-item">
+              <div class="status-label">USB Output</div>
+              <div class="status-value">
+                <span class="power-state ${usbClass}">${usbText}</span>
               </div>
             </div>
             <div class="status-item">
               <div class="status-label">VBUS Voltage</div>
-              <div class="status-value">${data.voltage.toFixed(2)} V</div>
+              <div class="status-value">${data.vbus.toFixed(2)} V</div>
+            </div>
+            <div class="status-item">
+              <div class="status-label">VOUT Voltage</div>
+              <div class="status-value">${data.vout.toFixed(2)} V</div>
             </div>
             <div class="status-item">
               <div class="status-label">WiFi</div>
@@ -364,8 +385,16 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         });
     }
 
-    function setPower(state) {
-      fetch('/api/power', {
+    function setPowerJack(state) {
+      fetch('/api/powerjack', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({state: state})
+      }).then(() => loadStatus());
+    }
+
+    function setUSBOutput(state) {
+      fetch('/api/usboutput', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({state: state})
@@ -474,8 +503,10 @@ void handleStatus() {
   }
   
   String json = "{";
-  json += "\"power\":" + String(powerState ? "true" : "false") + ",";
-  json += "\"voltage\":" + String(getVBusVoltage(), 2) + ",";
+  json += "\"powerJack\":" + String(powerJackState ? "true" : "false") + ",";
+  json += "\"usbOutput\":" + String(usbOutputState ? "true" : "false") + ",";
+  json += "\"vbus\":" + String(getVBusVoltage(), 2) + ",";
+  json += "\"vout\":" + String(getVOutVoltage(), 2) + ",";
   json += "\"wifi\":\"" + String(wifiConnected ? "Connected" : "Disconnected") + "\",";
   json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
   json += "\"timezone\":\"" + String(config.timezone) + "\",";
@@ -501,11 +532,22 @@ void handleGetSchedules() {
   server.send(200, "application/json", json);
 }
 
-void handleSetPower() {
+void handleSetPowerJack() {
   if (server.hasArg("plain")) {
     String body = server.arg("plain");
     bool state = body.indexOf("true") > 0;
-    setPowerState(state);
+    setPowerJackState(state);
+    server.send(200, "application/json", "{\"success\":true}");
+  } else {
+    server.send(400, "application/json", "{\"error\":\"Missing body\"}");
+  }
+}
+
+void handleSetUSBOutput() {
+  if (server.hasArg("plain")) {
+    String body = server.arg("plain");
+    bool state = body.indexOf("true") > 0;
+    setUSBOutputState(state);
     server.send(200, "application/json", "{\"success\":true}");
   } else {
     server.send(400, "application/json", "{\"error\":\"Missing body\"}");
@@ -516,7 +558,8 @@ void handleSetPD() {
   if (server.hasArg("plain")) {
     String body = server.arg("plain");
     int voltage = 9;
-    if (body.indexOf("\"voltage\":9") > 0) voltage = 9;
+    if (body.indexOf("\"voltage\":5") > 0) voltage = 5;
+    else if (body.indexOf("\"voltage\":9") > 0) voltage = 9;
     else if (body.indexOf("\"voltage\":12") > 0) voltage = 12;
     else if (body.indexOf("\"voltage\":15") > 0) voltage = 15;
     else if (body.indexOf("\"voltage\":20") > 0) voltage = 20;
@@ -622,7 +665,8 @@ void setupWebServer() {
   server.on("/", handleRoot);
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/schedules", HTTP_GET, handleGetSchedules);
-  server.on("/api/power", HTTP_POST, handleSetPower);
+  server.on("/api/powerjack", HTTP_POST, handleSetPowerJack);
+  server.on("/api/usboutput", HTTP_POST, handleSetUSBOutput);
   server.on("/api/pd", HTTP_POST, handleSetPD);
   server.on("/api/schedule", HTTP_POST, handleAddSchedule);
   server.on("/api/timezone", HTTP_POST, handleSetTimezone);

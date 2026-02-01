@@ -1,32 +1,46 @@
-# ESP8266 IOT Switch v2.0
+# ESP32-C6 Based IOT Switch v3.0
 
-A modular IOT switch control system with web interface and serial commands.
+A modular dual-output IOT switch control system with web interface and serial commands for ESP32-C6.
 
-Some quick notes: I am using 8266 for now, but I am thinking C6 might be a better option, will do that later.
-
-Original Code was written in a single Arduino file so I can just brain dead upload and all that, but I guess that's too long to read so I used LLM to restructure it into the current version, which I haven't test yet.
+**Update**: Migrated from ESP8266 to ESP32-C6 with enhanced features including dual output control (Power Jack + USB), full CH224K PD control (all 3 CFG pins), and dual voltage monitoring (VBUS + VOUT).
 
 ## Project Structure
 
 ```
 ESP-IOT-SourceCode/
-├── ESP-IOT-SourceCode.ino  # Main entry point
+├── ESP-IOT-SourceCode.ino  # Main entry point (ESP32-C6)
 ├── config.h                # Configuration & pin definitions
 ├── storage.h/cpp           # EEPROM storage management
-├── hardware.h/cpp          # Hardware control (power, PD, buttons)
+├── hardware.h/cpp          # Hardware control (dual outputs, PD, buttons)
 ├── network.h/cpp           # WiFi & NTP time synchronization
 ├── scheduler.h/cpp         # Schedule management & execution
 ├── webserver.h/cpp         # Web UI & REST API
-└── serial_cmd.h/cpp        # Serial command interface
+├── serial_cmd.h/cpp        # Serial command interface
+├── API.md                  # Complete API documentation
+├── MIGRATION_NOTES.md      # ESP8266 → ESP32-C6 migration details
+└── QUICKSTART.md          # Quick start guide
 ```
 
 ## Features
 
+### Dual Output Control
+- **Power Jack Output** (GPIO11) - High power output for devices
+- **USB Output** (GPIO10) - Secondary USB power output
+- Independent control of both outputs via web, API, or buttons
+- Persistent state saved to EEPROM
+
+### Voltage Monitoring
+- **VBUS Monitoring** (GPIO2 ADC) - Tracks PD input voltage
+- **VOUT Monitoring** (GPIO3 ADC) - Tracks output voltage
+- Real-time voltage display in web interface
+- 12-bit ADC resolution for accurate measurements
+
 ### Web Interface
 - **Modern responsive UI** - Works on desktop, tablet, and mobile
 - **Real-time status monitoring** - Auto-refresh every 10 seconds
-- **Power control** - Turn device ON/OFF with a click
-- **PD voltage selection** - Choose 9V, 12V, 15V, or 20V
+- **Dual output control** - Independent jack and USB control
+- **Voltage display** - Shows both VBUS and VOUT in real-time
+- **PD voltage selection** - Choose 5V, 9V, 12V, 15V, or 20V
 - **Schedule management** - Add/remove scheduled actions
 - **Configuration** - Set WiFi, timezone via web interface
 
@@ -35,8 +49,11 @@ All commands available via Serial @ 115200 baud:
 - `/help` - Show command list
 - `/wifi <SSID> <PASSWORD>` - Configure WiFi
 - `/timezone <CODE>` - Set timezone (UTC+8, PST, JST, etc.)
-- `/on` / `/off` - Power control
-- `/pd <voltage>` - Set PD voltage (9/12/15/20)
+- `/jack_on` / `/jack_off` - Power jack control
+- `/usb_on` / `/usb_off` - USB output control
+- `/pd <voltage>` - Set PD voltage (5/9/12/15/20)
+- `/vbus` - Read VBUS voltage
+- `/vout` - Read VOUT voltage
 - `/do_at <HHMM> <on|off>` - Add schedule
 - `/do_list` - List schedules
 - `/do_remove_at <index>` - Remove schedule
@@ -46,11 +63,15 @@ All commands available via Serial @ 115200 baud:
 
 #### GET Endpoints
 - `GET /` - Web UI
-- `GET /api/status` - System status JSON
+- `GET /api/status` - System status JSON (includes both outputs and voltages)
 - `GET /api/schedules` - List all schedules
 
 #### POST Endpoints
-- `POST /api/power` - Set power state
+- `POST /api/powerjack` - Control power jack
+  ```json
+  {"state": true}
+  ```
+- `POST /api/usboutput` - Control USB output
   ```json
   {"state": true}
   ```
@@ -74,28 +95,57 @@ All commands available via Serial @ 115200 baud:
 #### DELETE Endpoints
 - `DELETE /api/schedule/{index}` - Remove schedule
 
+See [API.md](ESP-IOT-SourceCode/API.md) for complete API documentation.
+
 ## 🔧 Hardware Setup
 
-### Pin Mapping
-- **D1 (GPIO5)** - Power switch output
-- **D2 (GPIO4)** - Button 1 (Toggle)
-- **D3 (GPIO0)** - Button 2 (Power ON)
-- **D4 (GPIO2)** - Button 3 (Power OFF)
-- **D5 (GPIO14)** - Button 4 (Reserved)
-- **D6 (GPIO12)** - CH224K CFG2
-- **D7 (GPIO13)** - CH224K CFG3
-- **A0** - Voltage sensing (VBUS * 10/57)
+### Pin Mapping (ESP32-C6)
+
+#### Button Inputs (Internal Pullup)
+- **GPIO4** - Button 1 (Toggle Power Jack)
+- **GPIO5** - Button 2 (Toggle USB Output)
+- **GPIO6** - Button 3 (Cycle PD Voltage)
+- **GPIO7** - Button 4 (Enable All Outputs)
+
+#### Output Control
+- **GPIO11** - Power Jack Enable (HIGH=on, LOW=off)
+- **GPIO10** - USB Output Enable (LOW=on, HIGH=off) *[Inverted]*
+
+#### CH224K PD Control
+- **GPIO18** - CH224K CFG1 (SDIO_CLK)
+- **GPIO19** - CH224K CFG2 (SDIO_DATA0)
+- **GPIO20** - CH224K CFG3 (SDIO_DATA1)
+
+#### Voltage Sensing (12-bit ADC)
+- **GPIO2** - VBUS voltage sensing (PD input)
+- **GPIO3** - VOUT voltage sensing (output)
 
 ### CH224K PD Voltage Selection
-| CFG1 | CFG2 | CFG3 | Voltage |
-|------|------|------|---------|
-| 1    | X    | X    | 5V      |
-| 0    | 0    | 0    | 9V      |
-| 0    | 0    | 1    | 12V     |
-| 0    | 1    | 1    | 15V     |
-| 0    | 1    | 0    | 20V     |
+| Voltage | CFG1 | CFG2 | CFG3 | Binary |
+|---------|------|------|------|--------|
+| 5V      | HIGH | LOW  | LOW  | 1XX    |
+| 9V      | LOW  | LOW  | LOW  | 000    |
+| 12V     | LOW  | LOW  | HIGH | 001    |
+| 15V     | LOW  | HIGH | HIGH | 011    |
+| 20V     | LOW  | HIGH | LOW  | 010    |
 
-*Note: CFG1 has an auto switch feature for plug detection*
+### Voltage Divider Circuit
+Both VBUS and VOUT require voltage dividers to scale down to 3.3V max:
+```
+VIN ──[R1]──┬──[R2]──┐ GND
+            │
+          ADC Pin (GPIO2/GPIO3)
+```
+
+**Current Configuration:**
+- R1 = 47kΩ (high side)
+- R2 = 5.1kΩ (low side)
+- Ratio = (R1+R2)/R2 = 52.1/5.1 = 10.216
+- Max safe input = 3.3V × 10.216 ≈ 33.7V
+
+This configuration is suitable for monitoring up to 20V PD voltages with adequate safety margin.
+
+If you use different resistor values, update `VBUS_DIVIDER_RATIO` and `VOUT_DIVIDER_RATIO` in `config.h`.
 
 ## 📡 Usage
 

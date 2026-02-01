@@ -1,9 +1,17 @@
 # API Documentation
 
-Base URL: `http://[ESP8266_IP_ADDRESS]`
+Base URL: `http://[ESP32-C6_IP_ADDRESS]`
 
 ## Authentication
 No authentication required (local network only recommended)
+
+## Hardware Overview
+- **ESP32-C6** with dual output control
+- **Power Jack Output**: GPIO11 (HIGH=enable, LOW=disable)
+- **USB Output**: GPIO10 (LOW=enable, HIGH=disable)
+- **CH224K PD Control**: GPIO18 (CFG1), GPIO19 (CFG2), GPIO20 (CFG3)
+- **Voltage Sensing**: GPIO2 (VBUS), GPIO3 (VOUT)
+- **Button Inputs**: GPIO4-7 with internal pullup
 
 ## Endpoints
 
@@ -20,25 +28,29 @@ Get current system status.
 **Response:**
 ```json
 {
-  "power": true,
-  "voltage": 12.34,
+  "powerJack": true,
+  "usbOutput": false,
+  "vbus": 12.34,
+  "vout": 11.98,
   "wifi": "Connected",
   "ip": "192.168.1.100",
   "timezone": "UTC+8",
-  "time": "2025-12-07 15:30:45",
+  "time": "2026-01-31 15:30:45",
   "pdVoltage": 12,
   "schedules": 3
 }
 ```
 
 **Fields:**
-- `power` (boolean) - Current power state
-- `voltage` (float) - Measured VBUS voltage
+- `powerJack` (boolean) - Power jack output state
+- `usbOutput` (boolean) - USB output state
+- `vbus` (float) - Measured VBUS voltage (PD input)
+- `vout` (float) - Measured VOUT voltage (output)
 - `wifi` (string) - Connection status
 - `ip` (string) - Device IP address
 - `timezone` (string) - Configured timezone
 - `time` (string) - Current time or "Not synced"
-- `pdVoltage` (int) - PD voltage setting (9/12/15/20)
+- `pdVoltage` (int) - PD voltage setting (5/9/12/15/20)
 - `schedules` (int) - Number of active schedules
 
 ---
@@ -64,8 +76,8 @@ List all configured schedules.
 
 ---
 
-### POST /api/power
-Control device power state.
+### POST /api/powerjack
+Control power jack output state.
 
 **Request Body:**
 ```json
@@ -93,6 +105,28 @@ Control device power state.
 
 ---
 
+### POST /api/usboutput
+Control USB output state.
+
+**Request Body:**
+```json
+{
+  "state": true
+}
+```
+
+**Parameters:**
+- `state` (boolean) - `true` for ON, `false` for OFF
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+---
+
 ### POST /api/pd
 Set PD voltage.
 
@@ -104,7 +138,7 @@ Set PD voltage.
 ```
 
 **Parameters:**
-- `voltage` (int) - PD voltage (9, 12, 15, or 20)
+- `voltage` (int) - PD voltage (5, 9, 12, 15, or 20)
 
 **Response:**
 ```json
@@ -113,9 +147,16 @@ Set PD voltage.
 }
 ```
 
+**CH224K CFG Pin Configuration:**
+- **5V**: CFG1=HIGH, CFG2=LOW, CFG3=LOW (1XX)
+- **9V**: CFG1=LOW, CFG2=LOW, CFG3=LOW (000)
+- **12V**: CFG1=LOW, CFG2=LOW, CFG3=HIGH (001)
+- **15V**: CFG1=LOW, CFG2=HIGH, CFG3=HIGH (011)
+- **20V**: CFG1=LOW, CFG2=HIGH, CFG3=LOW (010)
+
 **Notes:**
-- CFG1 must be physically set to LOW for PD request
 - Device will verify voltage after setting
+- VBUS and VOUT voltages can be monitored via /api/status
 
 ---
 

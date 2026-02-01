@@ -2,7 +2,7 @@
 #include "hardware.h"
 #include "network.h"
 #include "storage.h"
-#include <ESP8266WiFi.h>
+#include <WiFi.h>
 
 void printHelp() {
   Serial.println(F("\n========== IOT SWITCH HELP =========="));
@@ -18,9 +18,13 @@ void printHelp() {
   Serial.println(F("  EU: CET (UTC+1), CEST (UTC+2)"));
   Serial.println(F("  Pacific: AEST (UTC+10), AEDT (UTC+11), NZST (UTC+12)"));
   Serial.println(F("\n--- Power Control ---"));
-  Serial.println(F("/on - Turn power ON"));
-  Serial.println(F("/off - Turn power OFF"));
-  Serial.println(F("/pd <voltage> - Set PD voltage (9, 12, 15, or 20)"));
+  Serial.println(F("/jack_on - Enable power jack output"));
+  Serial.println(F("/jack_off - Disable power jack output"));
+  Serial.println(F("/usb_on - Enable USB output"));
+  Serial.println(F("/usb_off - Disable USB output"));
+  Serial.println(F("/pd <voltage> - Set PD voltage (5, 9, 12, 15, or 20)"));
+  Serial.println(F("/vbus - Read VBUS voltage"));
+  Serial.println(F("/vout - Read VOUT voltage"));
   Serial.println(F("\n--- Scheduling ---"));
   Serial.println(F("/do_at <HHMM> <on|off> - Add scheduled action (24hr format)"));
   Serial.println(F("  Example: /do_at 2315 on"));
@@ -187,12 +191,20 @@ void handleDoRemoveAtCmd(String args) {
 void handleStatusCmd() {
   Serial.println(F("\n========== SYSTEM STATUS =========="));
   
-  Serial.print(F("Power State: "));
-  Serial.println(powerState ? F("ON") : F("OFF"));
+  Serial.print(F("Power Jack: "));
+  Serial.println(powerJackState ? F("ENABLED") : F("DISABLED"));
+  
+  Serial.print(F("USB Output: "));
+  Serial.println(usbOutputState ? F("ENABLED") : F("DISABLED"));
   
   float vbus = getVBusVoltage();
   Serial.print(F("VBUS Voltage: "));
   Serial.print(vbus, 2);
+  Serial.println(F("V"));
+  
+  float vout = getVOutVoltage();
+  Serial.print(F("VOUT Voltage: "));
+  Serial.print(vout, 2);
   Serial.println(F("V"));
   
   Serial.print(F("WiFi SSID: "));
@@ -255,13 +267,27 @@ void handleSerialCommand() {
     handleWiFiCmd(args);
   } else if (cmd == "/timezone") {
     handleTimezoneCmd(args);
-  } else if (cmd == "/on") {
-    setPowerState(true);
-  } else if (cmd == "/off") {
-    setPowerState(false);
+  } else if (cmd == "/jack_on") {
+    setPowerJackState(true);
+  } else if (cmd == "/jack_off") {
+    setPowerJackState(false);
+  } else if (cmd == "/usb_on") {
+    setUSBOutputState(true);
+  } else if (cmd == "/usb_off") {
+    setUSBOutputState(false);
   } else if (cmd == "/pd") {
     uint8_t voltage = args.toInt();
     setPDVoltage(voltage);
+  } else if (cmd == "/vbus") {
+    float vbus = getVBusVoltage();
+    Serial.print(F("VBUS Voltage: "));
+    Serial.print(vbus, 2);
+    Serial.println(F("V"));
+  } else if (cmd == "/vout") {
+    float vout = getVOutVoltage();
+    Serial.print(F("VOUT Voltage: "));
+    Serial.print(vout, 2);
+    Serial.println(F("V"));
   } else if (cmd == "/do_at") {
     handleDoAtCmd(args);
   } else if (cmd == "/do_list") {

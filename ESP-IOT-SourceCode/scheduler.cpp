@@ -14,7 +14,10 @@ void checkSchedules() {
       static uint16_t lastExecutedTime = 9999;
       if (currentTimeVal != lastExecutedTime) {
         lastExecutedTime = currentTimeVal;
-        setPowerState(config.schedules[i].action == 1);
+        // Apply schedule to both outputs
+        bool state = config.schedules[i].action == 1;
+        setPowerJackState(state);
+        setUSBOutputState(state);
         Serial.print(F("Schedule executed: "));
         Serial.print(config.schedules[i].time);
         Serial.print(F(" -> "));

@@ -1,6 +1,6 @@
 // ============================================================================
-// ESP8266 IOT SWITCH v2.0 - Main File
-// Modular architecture with web interface and serial commands
+// ESP32-C6 IOT SWITCH v3.0 - Main File
+// Updated for ESP32-C6 with dual output and enhanced PD control
 // ============================================================================
 
 #include <Arduino.h>
@@ -17,7 +17,8 @@
 // GLOBAL VARIABLES DEFINITION
 // ============================================================================
 Config config;
-bool powerState = false;
+bool powerJackState = false;
+bool usbOutputState = false;
 unsigned long lastWifiAttempt = 0;
 unsigned long lastTimeUpdate = 0;
 unsigned long lastButtonCheck = 0;
@@ -39,28 +40,44 @@ void setup() {
   delay(100);
   
   Serial.println(F("\n\n========================================"));
-  Serial.println(F("    ESP8266 IOT SWITCH v2.0"));
-  Serial.println(F("    Modular + Web Interface"));
+  Serial.println(F("    ESP32-C6 IOT SWITCH v3.0"));
+  Serial.println(F("    Dual Output + PD Control"));
   Serial.println(F("========================================\n"));
   
   // Initialize EEPROM
   EEPROM.begin(EEPROM_SIZE);
   loadConfig();
   
-  // Initialize pins
-  pinMode(POWER_SWITCH_PIN, OUTPUT);
-  digitalWrite(POWER_SWITCH_PIN, LOW);
+  // Initialize output pins
+  pinMode(POWER_JACK_PIN, OUTPUT);
+  pinMode(USB_OUTPUT_PIN, OUTPUT);
+  digitalWrite(POWER_JACK_PIN, LOW);
+  digitalWrite(USB_OUTPUT_PIN, HIGH);  // HIGH = disabled (inverted)
   
+  // Initialize CH224K CFG pins
+  pinMode(CFG1_PIN, OUTPUT);
   pinMode(CFG2_PIN, OUTPUT);
   pinMode(CFG3_PIN, OUTPUT);
   
+  // Initialize button pins with internal pullup
   pinMode(BUTTON1_PIN, INPUT_PULLUP);
   pinMode(BUTTON2_PIN, INPUT_PULLUP);
   pinMode(BUTTON3_PIN, INPUT_PULLUP);
   pinMode(BUTTON4_PIN, INPUT_PULLUP);
   
+  // Initialize ADC pins
+  pinMode(VBUS_ADC_PIN, INPUT);
+  pinMode(VOUT_ADC_PIN, INPUT);
+  
+  // Set ADC resolution for ESP32-C6
+  analogReadResolution(12);  // 12-bit resolution
+  
   // Set PD voltage from config
   setPDVoltage(config.pdVoltage);
+  
+  // Restore output states from config
+  setPowerJackState(config.powerJackState);
+  setUSBOutputState(config.usbOutputState);
   
   // Try to connect to WiFi if configured
   if (strlen(config.ssid) > 0) {
