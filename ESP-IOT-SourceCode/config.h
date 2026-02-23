@@ -2,6 +2,8 @@
 #define CONFIG_H
 
 #include <Arduino.h>
+#include <NetworkInterface.h>
+#include <NetworkEvents.h>
 #include <time.h>
 
 // ============================================================================

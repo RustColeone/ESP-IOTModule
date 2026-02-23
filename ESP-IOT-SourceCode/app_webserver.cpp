@@ -1,7 +1,7 @@
-#include "webserver.h"
+#include "app_webserver.h"
 #include "hardware.h"
 #include "storage.h"
-#include "network.h"
+#include "app_network.h"
 #include <WebServer.h>
 #include <WiFi.h>
 

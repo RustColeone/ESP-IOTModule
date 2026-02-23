@@ -8,9 +8,9 @@
 #include "config.h"
 #include "storage.h"
 #include "hardware.h"
-#include "network.h"
+#include "app_network.h"
 #include "scheduler.h"
-#include "webserver.h"
+#include "app_webserver.h"
 #include "serial_cmd.h"
 
 // ============================================================================

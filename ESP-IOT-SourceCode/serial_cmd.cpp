@@ -1,6 +1,6 @@
 #include "serial_cmd.h"
 #include "hardware.h"
-#include "network.h"
+#include "app_network.h"
 #include "storage.h"
 #include <WiFi.h>
 
