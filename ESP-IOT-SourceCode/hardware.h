@@ -12,7 +12,6 @@ void setPDVoltage(uint8_t voltage);
 
 // Voltage sensing
 float getVBusVoltage();
-float getVOutVoltage();
 
 // Button handling
 void checkButtons();

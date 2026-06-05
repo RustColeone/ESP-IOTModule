@@ -1,6 +1,6 @@
 // ============================================================================
-// ESP32-C6 IOT SWITCH v3.0 - Main File
-// Updated for ESP32-C6 with dual output and enhanced PD control
+// ESP8266 IOT SWITCH v3.1 - Main File
+// Reverted to ESP8266 with CH217K USB, CH224K PD control
 // ============================================================================
 
 #include <Arduino.h>
@@ -40,7 +40,7 @@ void setup() {
   delay(100);
   
   Serial.println(F("\n\n========================================"));
-  Serial.println(F("    ESP32-C6 IOT SWITCH v3.0"));
+  Serial.println(F("    ESP8266 IOT SWITCH v3.1"));
   Serial.println(F("    Dual Output + PD Control"));
   Serial.println(F("========================================\n"));
   
@@ -65,12 +65,8 @@ void setup() {
   pinMode(BUTTON3_PIN, INPUT_PULLUP);
   pinMode(BUTTON4_PIN, INPUT_PULLUP);
   
-  // Initialize ADC pins
+  // Initialize ADC pin
   pinMode(VBUS_ADC_PIN, INPUT);
-  pinMode(VOUT_ADC_PIN, INPUT);
-  
-  // Set ADC resolution for ESP32-C6
-  analogReadResolution(12);  // 12-bit resolution
   
   // Set PD voltage from config
   setPDVoltage(config.pdVoltage);

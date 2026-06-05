@@ -2,10 +2,10 @@
 #include "hardware.h"
 #include "storage.h"
 #include "app_network.h"
-#include <WebServer.h>
-#include <WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266WiFi.h>
 
-WebServer server(80);
+ESP8266WebServer server(80);
 
 // HTML page
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
@@ -332,10 +332,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
               <div class="status-value">${data.vbus.toFixed(2)} V</div>
             </div>
             <div class="status-item">
-              <div class="status-label">VOUT Voltage</div>
-              <div class="status-value">${data.vout.toFixed(2)} V</div>
-            </div>
-            <div class="status-item">
               <div class="status-label">WiFi</div>
               <div class="status-value">${data.wifi}</div>
             </div>
@@ -505,8 +501,7 @@ void handleStatus() {
   String json = "{";
   json += "\"powerJack\":" + String(powerJackState ? "true" : "false") + ",";
   json += "\"usbOutput\":" + String(usbOutputState ? "true" : "false") + ",";
-  json += "\"vbus\":" + String(getVBusVoltage(), 2) + ",";
-  json += "\"vout\":" + String(getVOutVoltage(), 2) + ",";
+  json += "\"vbus\":" + String(getVBusVoltage(), 2) + ",";";
   json += "\"wifi\":\"" + String(wifiConnected ? "Connected" : "Disconnected") + "\",";
   json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
   json += "\"timezone\":\"" + String(config.timezone) + "\",";

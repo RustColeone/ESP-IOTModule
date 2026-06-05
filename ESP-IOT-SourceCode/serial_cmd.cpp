@@ -2,7 +2,7 @@
 #include "hardware.h"
 #include "app_network.h"
 #include "storage.h"
-#include <WiFi.h>
+#include <ESP8266WiFi.h>
 
 void printHelp() {
   Serial.println(F("\n========== IOT SWITCH HELP =========="));
@@ -24,7 +24,6 @@ void printHelp() {
   Serial.println(F("/usb_off - Disable USB output"));
   Serial.println(F("/pd <voltage> - Set PD voltage (5, 9, 12, 15, or 20)"));
   Serial.println(F("/vbus - Read VBUS voltage"));
-  Serial.println(F("/vout - Read VOUT voltage"));
   Serial.println(F("\n--- Scheduling ---"));
   Serial.println(F("/do_at <HHMM> <on|off> - Add scheduled action (24hr format)"));
   Serial.println(F("  Example: /do_at 2315 on"));
@@ -202,11 +201,6 @@ void handleStatusCmd() {
   Serial.print(vbus, 2);
   Serial.println(F("V"));
   
-  float vout = getVOutVoltage();
-  Serial.print(F("VOUT Voltage: "));
-  Serial.print(vout, 2);
-  Serial.println(F("V"));
-  
   Serial.print(F("WiFi SSID: "));
   if (strlen(config.ssid) > 0) {
     Serial.println(config.ssid);
@@ -282,11 +276,6 @@ void handleSerialCommand() {
     float vbus = getVBusVoltage();
     Serial.print(F("VBUS Voltage: "));
     Serial.print(vbus, 2);
-    Serial.println(F("V"));
-  } else if (cmd == "/vout") {
-    float vout = getVOutVoltage();
-    Serial.print(F("VOUT Voltage: "));
-    Serial.print(vout, 2);
     Serial.println(F("V"));
   } else if (cmd == "/do_at") {
     handleDoAtCmd(args);

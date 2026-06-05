@@ -2,8 +2,6 @@
 #define CONFIG_H
 
 #include <Arduino.h>
-#include <NetworkInterface.h>
-#include <NetworkEvents.h>
 #include <time.h>
 
 // ============================================================================
@@ -11,35 +9,33 @@
 // ============================================================================
 static const uint32_t BAUD = 115200;
 
-// Pin definitions - ESP32-C6
-#define BUTTON1_PIN 4        // GPIO4 - Button 1 (internal pullup)
-#define BUTTON2_PIN 5        // GPIO5 - Button 2 (internal pullup)
-#define BUTTON3_PIN 6        // GPIO6 - Button 3 (internal pullup)
-#define BUTTON4_PIN 7        // GPIO7 - Button 4 (internal pullup)
+// Pin definitions - ESP8266
+#define BUTTON1_PIN 4        // D2 (GPIO4)  - Button 1, external pullup
+#define BUTTON2_PIN 0        // D3 (GPIO0)  - Button 2, external pullup
+#define BUTTON3_PIN 2        // D4 (GPIO2)  - Button 3, external pullup
+#define BUTTON4_PIN 14       // D5 (GPIO14) - Button 4, external pullup
 
-// CH224K PD voltage control pins
-#define CFG1_PIN 18          // GPIO18 (SDIO_CLK) - CH224K CFG1
-#define CFG2_PIN 19          // GPIO19 (SDIO_DATA0) - CH224K CFG2
-#define CFG3_PIN 20          // GPIO20 (SDIO_DATA1) - CH224K CFG3
+// CH224K PD voltage control pins (each has physical GND switch + 3V3 pullup)
+#define CFG1_PIN 12          // D6 (GPIO12) - CH224K CFG1
+#define CFG2_PIN 13          // D7 (GPIO13) - CH224K CFG2
+#define CFG3_PIN 15          // D8 (GPIO15) - CH224K CFG3
 
-// ADC pins for voltage sensing
-#define VBUS_ADC_PIN 2       // GPIO2 - ADC for VBUS voltage sensing
-#define VOUT_ADC_PIN 3       // GPIO3 - ADC for VOUT voltage sensing
+// ADC pin for voltage sensing (ESP8266 has single ADC; no VOUT sense on this variant)
+#define VBUS_ADC_PIN A0      // A0 - VBUS voltage sensing
 
 // Output control pins
-#define POWER_JACK_PIN 11    // GPIO11 - Power jack enable (HIGH=enable, LOW=disable)
-#define USB_OUTPUT_PIN 10    // GPIO10 - USB output enable (LOW=enable, HIGH=disable)
+#define POWER_JACK_PIN 5     // D1 (GPIO5)  - Barrel jack VOUT enable (HIGH=enable, LOW=disable)
+#define USB_OUTPUT_PIN 16    // D0 (GPIO16) - CH217K USB 5V enable (LOW=enable, HIGH=disable)
 
 // Timing
 #define WIFI_RETRY_INTERVAL 60000      // 1 minute
 #define BUTTON_DEBOUNCE 50
 #define TIME_UPDATE_INTERVAL 3600000   // 1 hour
 
-// ADC configuration for ESP32-C6
-#define ADC_RESOLUTION 4095            // 12-bit ADC
+// ADC configuration for ESP8266 (10-bit, A0 = Vbus * 5.1/(47+5.1))
+#define ADC_RESOLUTION 1023            // 10-bit ADC
 #define ADC_VREF 3.3                   // Reference voltage
-#define VBUS_DIVIDER_RATIO 10.216      // (47k+5.1k)/5.1k = 52.1/5.1 = 10.216
-#define VOUT_DIVIDER_RATIO 10.216      // (47k+5.1k)/5.1k = 52.1/5.1 = 10.216
+#define VBUS_DIVIDER_RATIO 10.216      // Vbus = A0_voltage * (47+5.1)/5.1 = A0_voltage * 10.216
 
 // EEPROM Layout
 #define EEPROM_SIZE 512

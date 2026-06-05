@@ -74,12 +74,8 @@ void setPDVoltage(uint8_t voltage) {
   // Wait a bit and verify
   delay(500);
   float measuredVBus = getVBusVoltage();
-  float measuredVOut = getVOutVoltage();
   Serial.print(F("Measured VBUS: "));
   Serial.print(measuredVBus, 2);
-  Serial.println(F("V"));
-  Serial.print(F("Measured VOUT: "));
-  Serial.print(measuredVOut, 2);
   Serial.println(F("V"));
 }
 
@@ -93,12 +89,6 @@ float getVBusVoltage() {
   return vbus;
 }
 
-float getVOutVoltage() {
-  int rawValue = analogRead(VOUT_ADC_PIN);
-  float adcVoltage = (rawValue * ADC_VREF / ADC_RESOLUTION);
-  float vout = adcVoltage * VOUT_DIVIDER_RATIO;
-  return vout;
-}
 
 // ============================================================================
 // Button Handling
