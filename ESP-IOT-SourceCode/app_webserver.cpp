@@ -52,9 +52,7 @@ String buildSseSignature() {
 }
 
 void sendSseStatusIfNeeded(bool force) {
-  if (!sseClientActive) {
-    return;
-  }
+  if (!sseClientActive) return;
 
   if (!sseClient.connected()) {
     sseClient.stop();
@@ -82,9 +80,7 @@ void sendSseStatusIfNeeded(bool force) {
 }
 
 void handleEvents() {
-  if (sseClientActive && sseClient.connected()) {
-    sseClient.stop();
-  }
+  if (sseClientActive && sseClient.connected()) sseClient.stop();
 
   WiFiClient client = server.client();
   client.setNoDelay(true);
@@ -123,11 +119,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   <style>
     :root {
       --bg:#f0f2f5; --surface:#fff; --surface2:#f5f6f7;
-      --border:#e2e4e8; --border-s:#c8cad0;
+      --border:#e2e4e8; --border-s:#c0c2c8;
       --text:#18181b; --text2:#6b7280;
       --accent:#2563eb; --accent-bg:rgba(37,99,235,.1);
-      --on:#15803d; --on-bg:#dcfce7;
-      --off:#b91c1c; --off-bg:#fee2e2;
+      --en:#15803d; --en-bg:rgba(21,128,61,.1);
+      --dis:#b91c1c; --dis-bg:rgba(185,28,28,.1);
+      --on-bg:#dcfce7; --off-bg:#fee2e2;
       --shadow:0 1px 4px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.04);
       --r:10px;
     }
@@ -136,50 +133,48 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       --border:#38383f; --border-s:#52525c;
       --text:#f0f0f2; --text2:#8b8b9a;
       --accent:#4a8ef5; --accent-bg:rgba(74,142,245,.14);
-      --on:#4ade80; --on-bg:#052e16;
-      --off:#f87171; --off-bg:#3b0a0a;
+      --en:#4ade80; --en-bg:rgba(74,222,128,.12);
+      --dis:#f87171; --dis-bg:rgba(248,113,113,.12);
+      --on-bg:#052e16; --off-bg:#3b0a0a;
       --shadow:0 1px 4px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.04);
     }
     *{margin:0;padding:0;box-sizing:border-box;}
-    html,body{height:100%;}
     body{
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-      background:var(--bg); color:var(--text);
-      padding:20px; min-height:100vh;
+      background:var(--bg);color:var(--text);
+      padding:20px;min-height:100vh;
       transition:background .2s,color .2s;
     }
     .container{
-      max-width:760px; margin:0 auto;
+      max-width:760px;margin:0 auto;
       background:var(--surface);
       border-radius:var(--r);
       border:1px solid var(--border);
       box-shadow:var(--shadow);
       overflow:hidden;
     }
-    /* Header */
     .hdr{
       padding:18px 22px 14px;
       border-bottom:1px solid var(--border);
-      display:flex; justify-content:space-between; align-items:flex-start;
+      display:flex;justify-content:space-between;align-items:flex-start;
     }
     .hdr h1{font-size:1.25em;font-weight:600;letter-spacing:-.02em;}
     .hdr .sub{font-size:.78em;color:var(--text2);margin-top:2px;}
     .theme-btn{
-      background:var(--surface2); border:1px solid var(--border);
-      border-radius:6px; padding:5px 10px;
-      font-size:.8em; color:var(--text2); cursor:pointer;
-      flex-shrink:0; margin-left:12px;
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:6px;padding:5px 10px;
+      font-size:.8em;color:var(--text2);cursor:pointer;
+      flex-shrink:0;margin-left:12px;
       transition:border-color .15s,color .15s;
     }
     .theme-btn:hover{border-color:var(--accent);color:var(--text);}
-    /* Sections */
     .sec{padding:18px 22px;border-bottom:1px solid var(--border);}
     .sec:last-child{border-bottom:none;}
     .sec-title{
-      font-size:.68em; font-weight:600; letter-spacing:.07em;
-      text-transform:uppercase; color:var(--text2);
+      font-size:.68em;font-weight:600;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--text2);
       margin-bottom:12px;
-      display:flex; justify-content:space-between; align-items:center;
+      display:flex;justify-content:space-between;align-items:center;
     }
     /* Status grid */
     .sgrid{
@@ -188,62 +183,77 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       gap:8px;
     }
     .si{
-      background:var(--surface2); border:1px solid var(--border);
-      border-radius:7px; padding:10px 12px;
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:7px;padding:10px 12px;
     }
     .sl{font-size:.7em;color:var(--text2);margin-bottom:3px;}
     .sv{font-size:.92em;font-weight:600;}
-    .s-on{color:var(--on);}
-    .s-off{color:var(--off);}
+    .s-on{color:var(--en);}
+    .s-off{color:var(--dis);}
     /* Buttons */
     .brow{display:flex;gap:8px;flex-wrap:wrap;}
     .brow.nw{flex-wrap:nowrap;}
     .brow.nw button{min-width:0;}
     button{
-      padding:9px 16px; font-size:.875em; font-weight:500;
-      border:1px solid var(--border); border-radius:6px;
-      background:var(--surface2); color:var(--text);
-      cursor:pointer; flex:1; min-width:90px;
-      transition:border-color .15s,background .15s,color .15s;
+      padding:9px 16px;font-size:.875em;font-weight:500;
+      border:1px solid var(--border);border-radius:6px;
+      background:var(--surface2);color:var(--text);
+      cursor:pointer;flex:1;min-width:90px;
+      transition:border-color .15s,background .15s,color .15s,opacity .15s;
     }
-    button:hover{border-color:var(--accent);}
+    button:hover{border-color:var(--border-s);}
+    /* Enable = green tint */
+    .btn-en{
+      background:var(--en-bg);border-color:var(--en);color:var(--en);
+    }
+    .btn-en:hover{opacity:.82;}
+    /* Disable = red tint */
+    .btn-dis{
+      background:var(--dis-bg);border-color:var(--dis);color:var(--dis);
+    }
+    .btn-dis:hover{opacity:.82;}
+    /* Primary (save/add actions) */
     button.prim{
-      background:var(--accent); border-color:var(--accent); color:#fff;
+      background:var(--accent);border-color:var(--accent);color:#fff;
     }
     button.prim:hover{opacity:.88;}
-    .bd{opacity:.32;}
+    .bd{opacity:.28;}
+    /* Active PD voltage */
     .pa{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);}
-    /* Schedule */
+    /* Schedule rows */
     .si-row{
-      display:flex; justify-content:space-between; align-items:center;
-      background:var(--surface2); border:1px solid var(--border);
-      border-radius:6px; padding:8px 10px; margin-bottom:6px;
+      display:flex;justify-content:space-between;align-items:center;
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:6px;padding:8px 10px;margin-bottom:6px;
     }
     .st{font-weight:600;font-size:.9em;}
     .sa{
-      font-size:.75em; padding:2px 8px; border-radius:20px;
-      font-weight:600; margin-left:8px;
+      font-size:.72em;padding:2px 7px;border-radius:20px;
+      font-weight:600;margin-left:6px;
     }
-    .a-on{background:var(--on-bg);color:var(--on);}
-    .a-off{background:var(--off-bg);color:var(--off);}
+    .a-on{background:var(--on-bg);color:var(--en);}
+    .a-off{background:var(--off-bg);color:var(--dis);}
+    .stgt{font-size:.72em;color:var(--text2);margin-left:6px;}
     .sdel{
-      background:none; border:none; color:var(--text2);
-      font-size:.78em; cursor:pointer; padding:3px 8px;
-      flex:none; min-width:0; border-radius:4px;
+      background:none;border:none;color:var(--text2);
+      font-size:.78em;cursor:pointer;padding:3px 8px;
+      flex:none;min-width:0;border-radius:4px;
       transition:color .15s;
     }
-    .sdel:hover{color:var(--off);border:none;}
+    .sdel:hover{color:var(--dis);border:none;}
     /* Forms */
     .fg{margin-bottom:12px;}
     .fg label{display:block;font-size:.78em;color:var(--text2);font-weight:500;margin-bottom:4px;}
     input,select{
-      width:100%; padding:8px 11px;
-      background:var(--surface2); border:1px solid var(--border);
-      border-radius:6px; font-size:.88em; color:var(--text);
+      width:100%;padding:8px 11px;
+      background:var(--surface2);border:1px solid var(--border);
+      border-radius:6px;font-size:.88em;color:var(--text);
       transition:border-color .15s;
     }
     input:focus,select:focus{outline:none;border-color:var(--accent);}
     small{font-size:.73em;color:var(--text2);display:block;margin-top:4px;}
+    .row2{display:flex;gap:8px;}
+    .row2>*{flex:1;}
     /* Toast */
     #toast{
       position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
@@ -253,14 +263,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       pointer-events:none;white-space:nowrap;
     }
     #toast.show{opacity:1;}
-    /* Refresh button */
     .rfbtn{
       background:none;border:none;color:var(--text2);
       font-size:.8em;cursor:pointer;padding:2px 6px;
       flex:none;min-width:0;border-radius:4px;
     }
     .rfbtn:hover{color:var(--accent);border:none;}
-    /* Mobile */
     @media(max-width:480px){
       body{padding:0;}
       .container{border-radius:0;border-left:none;border-right:none;}
@@ -270,6 +278,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       .sl{font-size:.65em;}
       .sv{font-size:.84em;}
       button{padding:9px 10px;font-size:.84em;min-width:50px;}
+      .row2{flex-direction:column;}
     }
   </style>
 </head>
@@ -282,7 +291,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       <h1>IOT Switch</h1>
       <div class="sub">ESP8266 &middot; Dual Output Power Management</div>
     </div>
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">&#9680; Theme</button>
+    <button class="theme-btn" onclick="toggleTheme()">&#9680; Theme</button>
   </div>
 
   <div class="sec">
@@ -298,16 +307,16 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   <div class="sec">
     <div class="sec-title">Power Jack</div>
     <div class="brow">
-      <button id="jack-on" onclick="setPowerJack(true)">Enable</button>
-      <button id="jack-off" onclick="setPowerJack(false)">Disable</button>
+      <button id="jack-on"  class="btn-en"  onclick="setPowerJack(true)">Enable</button>
+      <button id="jack-off" class="btn-dis" onclick="setPowerJack(false)">Disable</button>
     </div>
   </div>
 
   <div class="sec">
     <div class="sec-title">USB Output</div>
     <div class="brow">
-      <button id="usb-on" onclick="setUSBOutput(true)">Enable</button>
-      <button id="usb-off" onclick="setUSBOutput(false)">Disable</button>
+      <button id="usb-on"  class="btn-en"  onclick="setUSBOutput(true)">Enable</button>
+      <button id="usb-off" class="btn-dis" onclick="setUSBOutput(false)">Disable</button>
     </div>
   </div>
 
@@ -324,11 +333,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
   <div class="sec">
     <div class="sec-title">Schedule Manager</div>
-    <small style="margin-bottom:10px;">Applies to both outputs simultaneously.</small>
-    <div id="scheduleList" style="margin:10px 0 14px;"></div>
-    <div class="fg">
-      <label>Time</label>
-      <input type="time" id="schedTime">
+    <div id="scheduleList" style="margin-bottom:14px;"></div>
+    <div class="row2">
+      <div class="fg">
+        <label>Time</label>
+        <input type="time" id="schedTime">
+      </div>
+      <div class="fg">
+        <label>Output</label>
+        <select id="schedTarget">
+          <option value="0">Both Outputs</option>
+          <option value="1">Power Jack Only</option>
+          <option value="2">USB Output Only</option>
+        </select>
+      </div>
     </div>
     <div class="fg">
       <label>Action</label>
@@ -356,16 +374,39 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
   <div class="sec">
     <div class="sec-title">Timezone</div>
     <div class="fg">
-      <label>Code</label>
-      <input type="text" id="timezone" placeholder="e.g. UTC+8, PST, JST">
-      <small>UTC&plusmn;X &middot; EST PST MST CST JST KST HKT CET AEST</small>
+      <label>Region</label>
+      <select id="timezone">
+        <option value="UTC">UTC (Coordinated Universal Time)</option>
+        <option value="GMT">GMT / BST &mdash; London, Dublin</option>
+        <option value="CET">CET / CEST &mdash; Paris, Berlin, Rome, Madrid</option>
+        <option value="EET">EET / EEST &mdash; Athens, Helsinki, Bucharest</option>
+        <option value="MSK">MSK &mdash; Moscow, Istanbul (UTC+3, no DST)</option>
+        <option value="EST">EST / EDT &mdash; New York, Toronto (Eastern US)</option>
+        <option value="CST">CST / CDT &mdash; Chicago, Winnipeg (Central US)</option>
+        <option value="MST">MST / MDT &mdash; Denver, Calgary (Mountain US)</option>
+        <option value="PST">PST / PDT &mdash; Los Angeles, Vancouver (Pacific US)</option>
+        <option value="IST">IST &mdash; India (UTC+5:30, no DST)</option>
+        <option value="CNST">CST &mdash; China (UTC+8, no DST)</option>
+        <option value="HKT">HKT &mdash; Hong Kong (UTC+8, no DST)</option>
+        <option value="SGT">SGT &mdash; Singapore, Kuala Lumpur (UTC+8, no DST)</option>
+        <option value="JST">JST &mdash; Japan (UTC+9, no DST)</option>
+        <option value="KST">KST &mdash; Korea (UTC+9, no DST)</option>
+        <option value="AEST">AEST / AEDT &mdash; Sydney, Melbourne (Eastern AU)</option>
+        <option value="ACST">ACST / ACDT &mdash; Adelaide (Central AU)</option>
+        <option value="AWST">AWST &mdash; Perth (UTC+8, no DST)</option>
+        <option value="NZST">NZST / NZDT &mdash; New Zealand</option>
+      </select>
     </div>
-    <button class="prim" onclick="setTimezone()" style="width:100%;">Save Timezone</button>
+    <div class="brow" style="margin-top:8px;">
+      <button class="prim" onclick="setTimezone()" style="flex:2;">Save Timezone</button>
+      <button onclick="detectTZ()" style="flex:1;">Auto Detect</button>
+    </div>
+    <small style="margin-top:6px;">DST transitions are handled automatically for zones that observe them.</small>
   </div>
 
 </div>
 <script>
-  // Theme — runs after FOUC-prevention inline script in <head>
+  // ── Theme ──────────────────────────────────────────────────────────────────
   function toggleTheme() {
     var cur = document.documentElement.getAttribute('data-theme');
     var next = cur === 'dark' ? 'light' : 'dark';
@@ -373,7 +414,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     localStorage.setItem('iot-theme', next);
   }
 
-  // Toast
+  // ── Toast ──────────────────────────────────────────────────────────────────
   var _tt;
   function toast(msg, ms) {
     var t = document.getElementById('toast');
@@ -383,8 +424,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     _tt = setTimeout(function(){ t.classList.remove('show'); }, ms || 2500);
   }
 
-  // Clock
-  var clockBase = null, clockAt = 0, clockOnline = false;
+  // ── Clock ──────────────────────────────────────────────────────────────────
+  var clockBase = null, clockAt = 0;
   var evtSrc = null;
 
   function parseSrvTime(s) {
@@ -404,23 +445,32 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     el.textContent = fmtTime(new Date(clockBase.getTime() + Date.now() - clockAt));
   }
 
+  // ── Status rendering ───────────────────────────────────────────────────────
+  function si(label, val) {
+    return '<div class="si"><div class="sl">'+label+'</div><div class="sv">'+val+'</div></div>';
+  }
+  function setDim(onId, offId, state) {
+    var on = document.getElementById(onId), off = document.getElementById(offId);
+    if (on && off) { on.classList.toggle('bd',!state); off.classList.toggle('bd',state); }
+  }
+
   function renderStatus(d) {
-    clockOnline = true;
     var parsed = parseSrvTime(d.time);
     if (parsed) { clockBase = parsed; clockAt = Date.now(); }
 
     var jc = d.powerJack ? 's-on' : 's-off';
     var uc = d.usbOutput ? 's-on' : 's-off';
+
     document.getElementById('statusGrid').innerHTML =
       si('Power Jack','<span class="'+jc+'">'+(d.powerJack?'ON':'OFF')+'</span>')+
       si('USB Output','<span class="'+uc+'">'+(d.usbOutput?'ON':'OFF')+'</span>')+
-      si('VBUS',d.vbus.toFixed(2)+' V')+
-      si('WiFi',d.wifi)+
-      si('IP',d.ip)+
-      si('Timezone',d.timezone)+
+      si('VBUS', d.vbus.toFixed(2)+' V')+
+      si('WiFi', d.wifi)+
+      si('IP', d.ip)+
+      si('Timezone', d.timezone)+
       '<div class="si"><div class="sl">Time</div><div class="sv" id="cur-time">'+d.time+'</div></div>'+
-      si('PD',d.pdVoltage+' V')+
-      si('Schedules',d.schedules);
+      si('PD', d.pdVoltage+' V')+
+      si('Schedules', d.schedules);
 
     loadSchedules();
     tickClock();
@@ -431,21 +481,25 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       var b = document.getElementById('pd-'+v);
       if (b) b.classList.toggle('pa', d.pdVoltage === v);
     });
+
     var se = document.getElementById('wifiSSID');
     if (se && d.ssid) se.placeholder = d.ssid;
-  }
-  function si(label, val) {
-    return '<div class="si"><div class="sl">'+label+'</div><div class="sv">'+val+'</div></div>';
-  }
-  function setDim(onId, offId, state) {
-    var on = document.getElementById(onId), off = document.getElementById(offId);
-    if (on && off) { on.classList.toggle('bd',!state); off.classList.toggle('bd',state); }
+
+    // Sync timezone dropdown to current stored value
+    var tzSel = document.getElementById('timezone');
+    if (tzSel && d.timezone) {
+      for (var i = 0; i < tzSel.options.length; i++) {
+        if (tzSel.options[i].value === d.timezone) {
+          tzSel.selectedIndex = i; break;
+        }
+      }
+    }
   }
 
   function loadStatus() {
     fetch('/api/status').then(function(r){ return r.json(); })
       .then(renderStatus)
-      .catch(function(){ clockOnline = false; });
+      .catch(function(){});
   }
 
   function connectEvents() {
@@ -456,11 +510,13 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       try { renderStatus(JSON.parse(e.data)); } catch(_){}
     });
     evtSrc.onerror = function(){
-      clockOnline = false;
       if (evtSrc) { evtSrc.close(); evtSrc = null; }
       setTimeout(connectEvents, 3000);
     };
   }
+
+  // ── Schedules ──────────────────────────────────────────────────────────────
+  var TGT_LABEL = ['Both','Jack','USB'];
 
   function loadSchedules() {
     fetch('/api/schedules').then(function(r){ return r.json(); })
@@ -470,39 +526,51 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
           el.innerHTML = '<p style="color:var(--text2);font-size:.84em;">No schedules configured.</p>';
           return;
         }
-        el.innerHTML = data.schedules.map(function(s,i){
+        el.innerHTML = data.schedules.map(function(s, i){
+          var tgt = TGT_LABEL[s.target] || 'Both';
           return '<div class="si-row">'+
-            '<div><span class="st">'+s.time+'</span>'+
-            '<span class="sa a-'+s.action.toLowerCase()+'">'+s.action+'</span></div>'+
+            '<div>'+
+              '<span class="st">'+s.time+'</span>'+
+              '<span class="sa a-'+s.action.toLowerCase()+'">'+s.action+'</span>'+
+              '<span class="stgt">'+tgt+'</span>'+
+            '</div>'+
             '<button class="sdel" onclick="removeSchedule('+i+')">Remove</button>'+
-            '</div>';
+          '</div>';
         }).join('');
       });
   }
 
-  function setPowerJack(state) {
-    fetch('/api/powerjack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:state})})
-      .then(loadStatus);
-  }
-  function setUSBOutput(state) {
-    fetch('/api/usboutput',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:state})})
-      .then(loadStatus);
-  }
-  function setPD(v) {
-    fetch('/api/pd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({voltage:v})})
-      .then(function(){ toast('PD set to '+v+' V'); loadStatus(); });
-  }
   function addSchedule() {
     var tv = document.getElementById('schedTime').value;
     if (!tv) { toast('Please select a time'); return; }
     var p = tv.split(':');
+    var target = parseInt(document.getElementById('schedTarget').value);
+    var action = parseInt(document.getElementById('schedAction').value);
     fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({time:p[0]+p[1],action:parseInt(document.getElementById('schedAction').value)})})
+      body:JSON.stringify({time:p[0]+p[1], action:action, target:target})})
       .then(function(){ document.getElementById('schedTime').value=''; loadStatus(); });
   }
+
   function removeSchedule(i) {
     fetch('/api/schedule/'+i,{method:'DELETE'}).then(loadStatus);
   }
+
+  // ── Power / PD controls ────────────────────────────────────────────────────
+  function setPowerJack(state) {
+    fetch('/api/powerjack',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({state:state})}).then(loadStatus);
+  }
+  function setUSBOutput(state) {
+    fetch('/api/usboutput',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({state:state})}).then(loadStatus);
+  }
+  function setPD(v) {
+    fetch('/api/pd',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({voltage:v})})
+      .then(function(){ toast('PD set to '+v+' V'); loadStatus(); });
+  }
+
+  // ── WiFi / Timezone ────────────────────────────────────────────────────────
   function setWiFi() {
     var ssid = document.getElementById('wifiSSID').value;
     if (!ssid) { toast('Please enter SSID'); return; }
@@ -510,14 +578,57 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       body:JSON.stringify({ssid:ssid,password:document.getElementById('wifiPass').value})})
       .then(function(){ toast('WiFi saved. Restarting…',4000); });
   }
+
   function setTimezone() {
     var tz = document.getElementById('timezone').value;
-    if (!tz) { toast('Please enter timezone'); return; }
     fetch('/api/timezone',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({timezone:tz})})
       .then(function(){ toast('Timezone saved'); loadStatus(); });
   }
 
+  // IANA timezone name → our stored code
+  var IANA_MAP = {
+    'UTC':'UTC','Etc/UTC':'UTC','Etc/GMT':'UTC',
+    'Europe/London':'GMT','Europe/Dublin':'GMT','Europe/Lisbon':'GMT',
+    'Europe/Paris':'CET','Europe/Berlin':'CET','Europe/Rome':'CET',
+    'Europe/Madrid':'CET','Europe/Brussels':'CET','Europe/Amsterdam':'CET',
+    'Europe/Vienna':'CET','Europe/Zurich':'CET','Europe/Warsaw':'CET',
+    'Europe/Prague':'CET','Europe/Budapest':'CET','Europe/Stockholm':'CET',
+    'Europe/Athens':'EET','Europe/Helsinki':'EET','Europe/Bucharest':'EET',
+    'Europe/Riga':'EET','Europe/Vilnius':'EET','Europe/Tallinn':'EET',
+    'Europe/Moscow':'MSK','Europe/Istanbul':'MSK','Europe/Minsk':'MSK',
+    'America/New_York':'EST','America/Toronto':'EST','America/Detroit':'EST',
+    'America/Boston':'EST','America/Montreal':'EST',
+    'America/Chicago':'CST','America/Winnipeg':'CST','America/Mexico_City':'CST',
+    'America/Denver':'MST','America/Boise':'MST','America/Calgary':'MST',
+    'America/Los_Angeles':'PST','America/Vancouver':'PST','America/Seattle':'PST',
+    'Asia/Kolkata':'IST','Asia/Calcutta':'IST','Asia/Colombo':'IST',
+    'Asia/Shanghai':'CNST','Asia/Chongqing':'CNST','Asia/Urumqi':'CNST',
+    'Asia/Hong_Kong':'HKT',
+    'Asia/Singapore':'SGT','Asia/Kuala_Lumpur':'SGT',
+    'Asia/Tokyo':'JST',
+    'Asia/Seoul':'KST',
+    'Australia/Sydney':'AEST','Australia/Melbourne':'AEST','Australia/Brisbane':'AEST',
+    'Australia/Adelaide':'ACST',
+    'Australia/Perth':'AWST',
+    'Pacific/Auckland':'NZST','Pacific/Wellington':'NZST',
+  };
+
+  function detectTZ() {
+    var iana = (Intl && Intl.DateTimeFormat)
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : null;
+    if (!iana) { toast('Browser does not support timezone detection'); return; }
+    var code = IANA_MAP[iana];
+    if (code) {
+      document.getElementById('timezone').value = code;
+      toast('Detected: ' + iana);
+    } else {
+      toast(iana + ' not in list — set manually');
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
   setInterval(loadStatus, 15000);
   setInterval(tickClock, 1000);
   connectEvents();
@@ -537,15 +648,18 @@ void handleStatus() {
 }
 
 void handleGetSchedules() {
-  char json[512];
+  char json[640];
   int pos = snprintf(json, sizeof(json), "{\"schedules\":[");
-  for (int i = 0; i < config.scheduleCount && pos < (int)sizeof(json) - 50; i++) {
-    uint16_t t = config.schedules[i].time;
+  for (int i = 0; i < config.scheduleCount && pos < (int)sizeof(json) - 60; i++) {
+    uint16_t t   = config.schedules[i].time;
+    uint8_t  st  = config.schedules[i].action & 0x01;
+    uint8_t  tgt = (config.schedules[i].action >> 1) & 0x03;
     pos += snprintf(json + pos, sizeof(json) - pos,
-      "%s{\"time\":\"%02d:%02d\",\"action\":\"%s\"}",
+      "%s{\"time\":\"%02d:%02d\",\"action\":\"%s\",\"target\":%d}",
       i > 0 ? "," : "",
       t / 100, t % 100,
-      config.schedules[i].action ? "ON" : "OFF"
+      st ? "ON" : "OFF",
+      tgt
     );
   }
   snprintf(json + pos, sizeof(json) - pos, "]}");
@@ -597,16 +711,26 @@ void handleAddSchedule() {
     // Parse time
     int timeIdx = body.indexOf("\"time\":\"") + 8;
     int timeEnd = body.indexOf("\"", timeIdx);
-    String timeStr = body.substring(timeIdx, timeEnd);
-    uint16_t schedTime = timeStr.toInt();
+    uint16_t schedTime = body.substring(timeIdx, timeEnd).toInt();
 
-    // Parse action
+    // Parse action (on/off)
     int actionIdx = body.indexOf("\"action\":") + 9;
-    uint8_t action = body.substring(actionIdx, actionIdx + 1).toInt();
+    uint8_t state = body.substring(actionIdx, actionIdx + 1).toInt();
+
+    // Parse target (0=both, 1=jack, 2=usb); defaults to 0 if absent
+    int targetIdx = body.indexOf("\"target\":") + 9;
+    uint8_t target = 0;
+    if (targetIdx >= 9 && targetIdx < (int)body.length()) {
+      target = body.substring(targetIdx, targetIdx + 1).toInt();
+      if (target > 2) target = 0;
+    }
+
+    // Pack: bits[0]=state, bits[2:1]=target — backward-compatible with old schedules
+    uint8_t packed = (target << 1) | state;
 
     if (config.scheduleCount < 10) {
-      config.schedules[config.scheduleCount].time = schedTime;
-      config.schedules[config.scheduleCount].action = action;
+      config.schedules[config.scheduleCount].time   = schedTime;
+      config.schedules[config.scheduleCount].action = packed;
       config.scheduleCount++;
       saveConfig();
       server.send(200, "application/json", "{\"success\":true}");
@@ -638,12 +762,10 @@ void handleSetWiFi() {
   if (server.hasArg("plain")) {
     String body = server.arg("plain");
 
-    // Parse SSID
     int ssidIdx = body.indexOf("\"ssid\":\"") + 8;
     int ssidEnd = body.indexOf("\"", ssidIdx);
     String ssid = body.substring(ssidIdx, ssidEnd);
 
-    // Parse password
     int passIdx = body.indexOf("\"password\":\"") + 12;
     int passEnd = body.indexOf("\"", passIdx);
     String password = body.substring(passIdx, passEnd);
@@ -667,13 +789,12 @@ void handleSetTimezone() {
     int tzIdx = body.indexOf("\"timezone\":\"") + 12;
     int tzEnd = body.indexOf("\"", tzIdx);
     String tz = body.substring(tzIdx, tzEnd);
+    tz.toUpperCase();
 
     tz.toCharArray(config.timezone, 8);
     saveConfig();
 
-    if (wifiConnected) {
-      updateTime();
-    }
+    if (wifiConnected) updateTime();
 
     server.send(200, "application/json", "{\"success\":true}");
   } else {
@@ -683,17 +804,16 @@ void handleSetTimezone() {
 
 void setupWebServer() {
   server.on("/", handleRoot);
-  server.on("/api/status", HTTP_GET, handleStatus);
-  server.on("/api/events", HTTP_GET, handleEvents);
-  server.on("/api/schedules", HTTP_GET, handleGetSchedules);
+  server.on("/api/status",    HTTP_GET,  handleStatus);
+  server.on("/api/events",    HTTP_GET,  handleEvents);
+  server.on("/api/schedules", HTTP_GET,  handleGetSchedules);
   server.on("/api/powerjack", HTTP_POST, handleSetPowerJack);
   server.on("/api/usboutput", HTTP_POST, handleSetUSBOutput);
-  server.on("/api/pd", HTTP_POST, handleSetPD);
-  server.on("/api/schedule", HTTP_POST, handleAddSchedule);
-  server.on("/api/timezone", HTTP_POST, handleSetTimezone);
-  server.on("/api/wifi", HTTP_POST, handleSetWiFi);
+  server.on("/api/pd",        HTTP_POST, handleSetPD);
+  server.on("/api/schedule",  HTTP_POST, handleAddSchedule);
+  server.on("/api/timezone",  HTTP_POST, handleSetTimezone);
+  server.on("/api/wifi",      HTTP_POST, handleSetWiFi);
 
-  // Handle DELETE for schedule removal
   server.onNotFound([]() {
     String uri = server.uri();
     if (uri.startsWith("/api/schedule/") && server.method() == HTTP_DELETE) {
