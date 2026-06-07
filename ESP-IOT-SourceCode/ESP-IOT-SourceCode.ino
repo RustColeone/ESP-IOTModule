@@ -37,6 +37,10 @@ bool lastButton4 = HIGH;
 void setup() {
   Serial.begin(BAUD);
   Serial.setTimeout(100);
+  // Disable UART1 to stop firmware-level 74880-baud traffic on D4 (GPIO2 / Button3).
+  // Note: the ESP8266 bootloader still emits a brief burst on GPIO2 before this runs;
+  // the external pull-up on D4 ensures GPIO2 is HIGH at reset as required.
+  Serial1.end();
   delay(100);
   
   Serial.println(F("\n\n========================================"));
@@ -88,8 +92,7 @@ void setup() {
     currentTime = config.lastTime;
   }
   
-  printHelp();
-  Serial.println(F("Ready. Type /help for commands.\n"));
+  Serial.println(F("Ready.\n"));
 }
 
 // ============================================================================

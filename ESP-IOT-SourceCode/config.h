@@ -10,15 +10,28 @@
 static const uint32_t BAUD = 115200;
 
 // Pin definitions - ESP8266
+// BOOT CONSTRAINTS (ESP8266 samples these before user code runs):
+//   GPIO15 (D8) MUST be LOW  at boot — high level prevents boot entirely
+//   GPIO2  (D4) MUST be HIGH at boot — also UART1 TX (74880 baud boot messages)
+//   GPIO0  (D3) MUST be HIGH at boot — low level forces flash/download mode
 #define BUTTON1_PIN 4        // D2 (GPIO4)  - Button 1, external pullup
 #define BUTTON2_PIN 0        // D3 (GPIO0)  - Button 2, external pullup
+                             //   *** Boot mode pin: if held LOW at reset → flash mode
 #define BUTTON3_PIN 2        // D4 (GPIO2)  - Button 3, external pullup
+                             //   *** UART1 TX: bootloader emits 74880-baud data on this
+                             //       pin at every reset; Serial1.end() called in setup()
+                             //       to suppress firmware-level UART1 traffic
 #define BUTTON4_PIN 14       // D5 (GPIO14) - Button 4, external pullup
 
 // CH224K PD voltage control pins (each has physical GND switch + 3V3 pullup)
+// *** HARDWARE WARNING — CFG3 on GPIO15 (D8):
+//     GPIO15 MUST be LOW at boot. The 3V3 pull-up on CFG3 holds GPIO15 HIGH at
+//     rest, which will prevent the ESP8266 from booting when the PCB is connected.
+//     Hardware fix required: add a pull-down resistor (e.g. 10kΩ to GND) on GPIO15
+//     that dominates the 3V3 pull-up at boot, OR route CFG3 to a different pin.
 #define CFG1_PIN 12          // D6 (GPIO12) - CH224K CFG1
 #define CFG2_PIN 13          // D7 (GPIO13) - CH224K CFG2
-#define CFG3_PIN 15          // D8 (GPIO15) - CH224K CFG3
+#define CFG3_PIN 15          // D8 (GPIO15) - CH224K CFG3  *** see warning above
 
 // ADC pin for voltage sensing (ESP8266 has single ADC; no VOUT sense on this variant)
 #define VBUS_ADC_PIN A0      // A0 - VBUS voltage sensing
