@@ -64,7 +64,17 @@ void setPDVoltage(uint8_t voltage) {
       Serial.println(F("ERR: Invalid PD voltage. Use 5, 9, 12, 15, or 20."));
       return;
   }
-  
+
+  // Debug: read back what the ESP8266 itself thinks each CFG pin is set to.
+  // If these values are correct but a multimeter on the CH224K pins disagrees,
+  // the fault is downstream of the MCU (wiring/trace/pull network), not firmware.
+  Serial.print(F("CFG readback (MCU side) CFG1="));
+  Serial.print(digitalRead(CFG1_PIN));
+  Serial.print(F(" CFG2="));
+  Serial.print(digitalRead(CFG2_PIN));
+  Serial.print(F(" CFG3="));
+  Serial.println(digitalRead(CFG3_PIN));
+
   config.pdVoltage = voltage;
   saveConfig();
   Serial.print(F("PD voltage set to: "));

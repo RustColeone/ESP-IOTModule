@@ -9,36 +9,53 @@
 // ============================================================================
 static const uint32_t BAUD = 115200;
 
-// Pin definitions - ESP8266
+// Pin definitions - ESP8266 (board swapped from ESP32-C6 to ESP8266 due to stock
+// shortage; values below are the actual ESP8266 wiring — GPIO numbers differ from
+// the original C6 pinout, see BOOT CONSTRAINTS below for ESP8266-specific caveats)
 // BOOT CONSTRAINTS (ESP8266 samples these before user code runs):
-//   GPIO15 (D8) MUST be LOW  at boot — high level prevents boot entirely
+//   GPIO15 (D8) MUST be LOW  at boot — high level prevents boot entirely (unused on this board)
 //   GPIO2  (D4) MUST be HIGH at boot — also UART1 TX (74880 baud boot messages)
 //   GPIO0  (D3) MUST be HIGH at boot — low level forces flash/download mode
-#define BUTTON1_PIN 4        // D2 (GPIO4)  - Button 1, external pullup
-#define BUTTON2_PIN 0        // D3 (GPIO0)  - Button 2, external pullup
+#define BUTTON1_PIN 5        // D1 (GPIO5)  - Button 1, external pullup
+#define BUTTON2_PIN 4        // D2 (GPIO4)  - Button 2, external pullup
+#define BUTTON3_PIN 0        // D3 (GPIO0)  - Button 3, external pullup
                              //   *** Boot mode pin: if held LOW at reset → flash mode
-#define BUTTON3_PIN 2        // D4 (GPIO2)  - Button 3, external pullup
+#define BUTTON4_PIN 2        // D4 (GPIO2)  - Button 4, external pullup
                              //   *** UART1 TX: bootloader emits 74880-baud data on this
                              //       pin at every reset; Serial1.end() called in setup()
                              //       to suppress firmware-level UART1 traffic
-#define BUTTON4_PIN 14       // D5 (GPIO14) - Button 4, external pullup
 
 // CH224K PD voltage control pins (each has physical GND switch + 3V3 pullup)
-// *** HARDWARE WARNING — CFG3 on GPIO15 (D8):
-//     GPIO15 MUST be LOW at boot. The 3V3 pull-up on CFG3 holds GPIO15 HIGH at
-//     rest, which will prevent the ESP8266 from booting when the PCB is connected.
-//     Hardware fix required: add a pull-down resistor (e.g. 10kΩ to GND) on GPIO15
-//     that dominates the 3V3 pull-up at boot, OR route CFG3 to a different pin.
-#define CFG1_PIN 12          // D6 (GPIO12) - CH224K CFG1
-#define CFG2_PIN 13          // D7 (GPIO13) - CH224K CFG2
-#define CFG3_PIN 15          // D8 (GPIO15) - CH224K CFG3  *** see warning above
+// NOTE: CFG3 used to be on GPIO15 (D8), which conflicted with the ESP8266 boot
+// requirement (GPIO15 must be LOW at boot). CFG3 has been moved to GPIO13, so
+// GPIO15 is now unused/free on this board and the old boot-pullup warning no
+// longer applies to CFG3.
+#define CFG1_PIN 14          // D5 (GPIO14) - CH224K CFG1
+#define CFG2_PIN 12          // D6 (GPIO12) - CH224K CFG2
+#define CFG3_PIN 13          // D7 (GPIO13) - CH224K CFG3
 
 // ADC pin for voltage sensing (ESP8266 has single ADC; no VOUT sense on this variant)
 #define VBUS_ADC_PIN A0      // A0 - VBUS voltage sensing
 
 // Output control pins
-#define POWER_JACK_PIN 5     // D1 (GPIO5)  - Barrel jack VOUT enable (HIGH=enable, LOW=disable)
-#define USB_OUTPUT_PIN 16    // D0 (GPIO16) - CH217K USB 5V enable (LOW=enable, HIGH=disable)
+// *** HARDWARE HAZARD — DO NOT USE GPIO16 (D0), GPIO9, or GPIO10 AS OUTPUTS:
+//     - GPIO16/D0 is hard-wired to RST on virtually all ESP8266 dev boards (for
+//       deep-sleep wake). Driving it LOW resets the chip immediately.
+//     - GPIO9 (SD2) and GPIO10 (SD3) are SPI flash data lines used by the
+//       bootloader on every boot (QIO/QOUT flash mode, the common default).
+//       Driving them as general outputs corrupts flash reads and causes boot
+//       loops/crashes.
+//     GPIO15 (D8) is the only pin left that's free of these hazards (CFG3 moved
+//     off it), so POWER_JACK_PIN now lives there. GPIO15 must be LOW at boot,
+//     which matches "jack disabled by default" as long as nothing external
+//     pulls it high before setup() runs — verify with a multimeter/scope if the
+//     board fails to boot after wiring.
+#define POWER_JACK_PIN 15    // D8 (GPIO15) - Barrel jack VOUT enable (HIGH=enable, LOW=disable)
+// *** CAUTION: GPIO10 (SD3) is a SPI flash pin. It only behaves as a normal GPIO
+//     when the flash is in DOUT mode; in QIO/QOUT mode (the common default) it is
+//     reserved for the flash chip and will not work as a general output. Verify
+//     the board's flash mode before relying on this pin.
+#define USB_OUTPUT_PIN 10    // D12/SD3 (GPIO10) - CH217K USB 5V enable (LOW=enable, HIGH=disable)
 
 // Timing
 #define WIFI_RETRY_INTERVAL 60000      // 1 minute

@@ -1,45 +1,44 @@
-# ESP32-C6 Based IOT Switch v3.0
+# ESP8266 Based IOT Switch v3.1
 
-A modular dual-output IOT switch control system with web interface and serial commands for ESP32-C6.
+A modular dual-output IOT switch control system with web interface and serial commands for ESP8266.
 
-**Update**: Migrated from ESP8266 to ESP32-C6 with enhanced features including dual output control (Power Jack + USB), full CH224K PD control (all 3 CFG pins), and dual voltage monitoring (VBUS + VOUT).
+**Update**: This project was originally targeting an ESP32-C6, but due to chip stock shortages it has been reverted to run on ESP8266 instead. Pin assignments, ADC layout, and available features below reflect the **ESP8266** hardware actually in use. See [MIGRATION_NOTES.md](ESP-IOT-SourceCode/MIGRATION_NOTES.md) for historical ESP32-C6 details (kept for reference only — do not use its pin numbers).
 
 ## Project Structure
 
 ```
 ESP-IOT-SourceCode/
-├── ESP-IOT-SourceCode.ino  # Main entry point (ESP32-C6)
+├── ESP-IOT-SourceCode.ino  # Main entry point (ESP8266)
 ├── config.h                # Configuration & pin definitions
 ├── storage.h/cpp           # EEPROM storage management
 ├── hardware.h/cpp          # Hardware control (dual outputs, PD, buttons)
-├── network.h/cpp           # WiFi & NTP time synchronization
+├── app_network.h/cpp       # WiFi & NTP time synchronization
 ├── scheduler.h/cpp         # Schedule management & execution
-├── webserver.h/cpp         # Web UI & REST API
+├── app_webserver.h/cpp     # Web UI & REST API (ESP8266WebServer)
 ├── serial_cmd.h/cpp        # Serial command interface
 ├── API.md                  # Complete API documentation
-├── MIGRATION_NOTES.md      # ESP8266 → ESP32-C6 migration details
+├── MIGRATION_NOTES.md      # ESP8266 → ESP32-C6 migration details (historical, stale pin numbers)
 └── QUICKSTART.md          # Quick start guide
 ```
 
 ## Features
 
 ### Dual Output Control
-- **Power Jack Output** (GPIO11) - High power output for devices
-- **USB Output** (GPIO10) - Secondary USB power output
+- **Power Jack Output** (GPIO15/D8) - High power output for devices
+- **USB Output** (GPIO10) - Secondary USB power output *(shares a SPI-flash pin — see Hardware Hazards below)*
 - Independent control of both outputs via web, API, or buttons
 - Persistent state saved to EEPROM
 
 ### Voltage Monitoring
-- **VBUS Monitoring** (GPIO2 ADC) - Tracks PD input voltage
-- **VOUT Monitoring** (GPIO3 ADC) - Tracks output voltage
-- Real-time voltage display in web interface
-- 12-bit ADC resolution for accurate measurements
+- **VBUS Monitoring** (A0 ADC) - Tracks PD input voltage
+- 10-bit ADC resolution
+- This ESP8266 variant has a single ADC pin, so there is **no separate VOUT sensing** (unlike the original ESP32-C6 design)
 
 ### Web Interface
 - **Modern responsive UI** - Works on desktop, tablet, and mobile
-- **Real-time status monitoring** - Auto-refresh every 10 seconds
+- **Real-time status monitoring** - Auto-refresh + Server-Sent Events
 - **Dual output control** - Independent jack and USB control
-- **Voltage display** - Shows both VBUS and VOUT in real-time
+- **Voltage display** - Shows VBUS in real-time
 - **PD voltage selection** - Choose 5V, 9V, 12V, 15V, or 20V
 - **Schedule management** - Add/remove scheduled actions
 - **Configuration** - Set WiFi, timezone via web interface
@@ -53,7 +52,6 @@ All commands available via Serial @ 115200 baud:
 - `/usb_on` / `/usb_off` - USB output control
 - `/pd <voltage>` - Set PD voltage (5/9/12/15/20)
 - `/vbus` - Read VBUS voltage
-- `/vout` - Read VOUT voltage
 - `/do_at <HHMM> <on|off>` - Add schedule
 - `/do_list` - List schedules
 - `/do_remove_at <index>` - Remove schedule
@@ -63,7 +61,8 @@ All commands available via Serial @ 115200 baud:
 
 #### GET Endpoints
 - `GET /` - Web UI
-- `GET /api/status` - System status JSON (includes both outputs and voltages)
+- `GET /api/status` - System status JSON
+- `GET /api/events` - Server-Sent Events stream for live status push
 - `GET /api/schedules` - List all schedules
 
 #### POST Endpoints
@@ -92,33 +91,36 @@ All commands available via Serial @ 115200 baud:
   {"timezone": "UTC+8"}
   ```
 
-#### DELETE Endpoints
-- `DELETE /api/schedule/{index}` - Remove schedule
-
 See [API.md](ESP-IOT-SourceCode/API.md) for complete API documentation.
 
 ## 🔧 Hardware Setup
 
-### Pin Mapping (ESP32-C6)
+### Pin Mapping (ESP8266)
 
 #### Button Inputs (Internal Pullup)
-- **GPIO4** - Button 1 (Toggle Power Jack)
-- **GPIO5** - Button 2 (Toggle USB Output)
-- **GPIO6** - Button 3 (Cycle PD Voltage)
-- **GPIO7** - Button 4 (Enable All Outputs)
+- **GPIO5 (D1)** - Button 1 (Toggle Power Jack)
+- **GPIO4 (D2)** - Button 2 (Toggle USB Output)
+- **GPIO0 (D3)** - Button 3 (Cycle PD Voltage) — *boot-mode pin, held LOW at reset forces flash mode*
+- **GPIO2 (D4)** - Button 4 (Enable All Outputs) — *UART1 TX; boot emits 74880-baud noise on this pin*
 
 #### Output Control
-- **GPIO11** - Power Jack Enable (HIGH=on, LOW=off)
+- **GPIO15 (D8)** - Power Jack Enable (HIGH=on, LOW=off)
 - **GPIO10** - USB Output Enable (LOW=on, HIGH=off) *[Inverted]*
 
 #### CH224K PD Control
-- **GPIO18** - CH224K CFG1 (SDIO_CLK)
-- **GPIO19** - CH224K CFG2 (SDIO_DATA0)
-- **GPIO20** - CH224K CFG3 (SDIO_DATA1)
+- **GPIO14 (D5)** - CH224K CFG1
+- **GPIO12 (D6)** - CH224K CFG2
+- **GPIO13 (D7)** - CH224K CFG3
 
-#### Voltage Sensing (12-bit ADC)
-- **GPIO2** - VBUS voltage sensing (PD input)
-- **GPIO3** - VOUT voltage sensing (output)
+#### Voltage Sensing (10-bit ADC)
+- **A0** - VBUS voltage sensing (PD input)
+
+### ⚠️ Hardware Hazards — ESP8266-Specific Pin Caveats
+These pins behave differently on ESP8266 than a typical MCU and **must not** be repurposed casually:
+- **GPIO16 (D0)** - Hard-wired to RST on most ESP8266 dev boards for deep-sleep wake. Driving it LOW at runtime resets the chip. **Do not use as a general output.**
+- **GPIO9 / GPIO10 (SD2/SD3)** - SPI flash data lines used by the bootloader in QIO/QOUT flash mode (the common default). Using GPIO9 as an output has caused boot loops; GPIO10 is currently used for USB Output and should be watched closely / migrated off if instability appears.
+- **GPIO15 (D8)** - Must be LOW at boot or the module won't boot. Now used for Power Jack Enable; confirm nothing external holds this pin HIGH before `setup()` runs.
+- **GPIO0 / GPIO2** - Sampled at boot for flash/UART mode selection; both are used here for buttons with external pull-ups, per the boot-constraint notes in `config.h`.
 
 ### CH224K PD Voltage Selection
 | Voltage | CFG1 | CFG2 | CFG3 | Binary |
@@ -130,11 +132,11 @@ See [API.md](ESP-IOT-SourceCode/API.md) for complete API documentation.
 | 20V     | LOW  | HIGH | LOW  | 010    |
 
 ### Voltage Divider Circuit
-Both VBUS and VOUT require voltage dividers to scale down to 3.3V max:
+VBUS requires a voltage divider to scale down to 3.3V max:
 ```
 VIN ──[R1]──┬──[R2]──┐ GND
             │
-          ADC Pin (GPIO2/GPIO3)
+          ADC Pin (A0)
 ```
 
 **Current Configuration:**
@@ -145,7 +147,7 @@ VIN ──[R1]──┬──[R2]──┐ GND
 
 This configuration is suitable for monitoring up to 20V PD voltages with adequate safety margin.
 
-If you use different resistor values, update `VBUS_DIVIDER_RATIO` and `VOUT_DIVIDER_RATIO` in `config.h`.
+If you use different resistor values, update `VBUS_DIVIDER_RATIO` in `config.h`.
 
 ## 📡 Usage
 
@@ -164,8 +166,8 @@ If you use different resistor values, update `VBUS_DIVIDER_RATIO` and `VOUT_DIVI
 ```python
 import requests
 
-# Set power ON
-requests.post('http://192.168.1.100/api/power', 
+# Set power jack ON
+requests.post('http://192.168.1.100/api/powerjack',
               json={'state': True})
 
 # Add schedule
@@ -174,7 +176,7 @@ requests.post('http://192.168.1.100/api/schedule',
 
 # Get status
 status = requests.get('http://192.168.1.100/api/status').json()
-print(f"Power: {status['power']}, Voltage: {status['voltage']}V")
+print(status)
 ```
 
 ## Persistent Storage
@@ -184,6 +186,7 @@ All settings are stored in EEPROM and survive power loss:
 - Timezone configuration
 - Last known time
 - PD voltage preference
+- Power jack / USB output states
 - All schedules (up to 10)
 
 ## Web UI Features
@@ -202,6 +205,7 @@ All settings are stored in EEPROM and survive power loss:
 - **Persistent** - Survives power loss
 - **Automatic execution** - Based on system time
 - **Duplicate prevention** - Won't execute same action twice per minute
+- Each schedule can target the power jack, USB output, or both
 
 ## Timezone Support
 
@@ -221,7 +225,7 @@ Supports both named timezones and UTC offsets:
 
 ## Notes
 
-- Web server runs on port 80
+- Web server runs on port 80 (`ESP8266WebServer`)
 - NTP servers: pool.ntp.org, time.nist.gov
 - Time updates hourly when WiFi connected
 - WiFi reconnection attempts every 60 seconds
@@ -232,7 +236,7 @@ Supports both named timezones and UTC offsets:
 
 Each module can be modified independently:
 - **config.h** - Change pin assignments, timing constants
-- **webserver.cpp** - Customize UI appearance, add new endpoints
+- **app_webserver.cpp** - Customize UI appearance, add new endpoints
 - **hardware.cpp** - Modify button behaviors, add new controls
 - **scheduler.cpp** - Change scheduling logic
 - **serial_cmd.cpp** - Add new serial commands
@@ -240,3 +244,4 @@ Each module can be modified independently:
 ---
 
 **Made with ⚡ for ESP8266 - Enjoy your smart IOT switch!**
+
