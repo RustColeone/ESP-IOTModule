@@ -1,17 +1,17 @@
 # API Documentation
 
-Base URL: `http://[ESP32-C6_IP_ADDRESS]`
+Base URL: `http://[ESP8266_IP_ADDRESS]`
 
 ## Authentication
 No authentication required (local network only recommended)
 
 ## Hardware Overview
-- **ESP32-C6** with dual output control
-- **Power Jack Output**: GPIO11 (HIGH=enable, LOW=disable)
+- **ESP8266** with dual output control
+- **Power Jack Output**: GPIO15 (HIGH=enable, LOW=disable)
 - **USB Output**: GPIO10 (LOW=enable, HIGH=disable)
-- **CH224K PD Control**: GPIO18 (CFG1), GPIO19 (CFG2), GPIO20 (CFG3)
-- **Voltage Sensing**: GPIO2 (VBUS), GPIO3 (VOUT)
-- **Button Inputs**: GPIO4-7 with internal pullup
+- **CH224K PD Control**: GPIO14 (CFG1), GPIO12 (CFG2), GPIO13 (CFG3)
+- **Voltage Sensing**: A0 (VBUS only — no separate VOUT)
+- **Button Inputs**: GPIO5, GPIO4, GPIO0, GPIO2 with internal pull-up
 
 ## Endpoints
 
@@ -31,13 +31,13 @@ Get current system status.
   "powerJack": true,
   "usbOutput": false,
   "vbus": 12.34,
-  "vout": 11.98,
   "wifi": "Connected",
   "ip": "192.168.1.100",
   "timezone": "UTC+8",
   "time": "2026-01-31 15:30:45",
   "pdVoltage": 12,
-  "schedules": 3
+  "schedules": 3,
+  "ssid": "MyNetwork"
 }
 ```
 
@@ -45,13 +45,13 @@ Get current system status.
 - `powerJack` (boolean) - Power jack output state
 - `usbOutput` (boolean) - USB output state
 - `vbus` (float) - Measured VBUS voltage (PD input)
-- `vout` (float) - Measured VOUT voltage (output)
 - `wifi` (string) - Connection status
 - `ip` (string) - Device IP address
 - `timezone` (string) - Configured timezone
 - `time` (string) - Current time or "Not synced"
 - `pdVoltage` (int) - PD voltage setting (5/9/12/15/20)
 - `schedules` (int) - Number of active schedules
+- `ssid` (string) - Configured WiFi SSID
 
 ---
 
@@ -156,7 +156,7 @@ Set PD voltage.
 
 **Notes:**
 - Device will verify voltage after setting
-- VBUS and VOUT voltages can be monitored via /api/status
+- VBUS voltage can be monitored via /api/status
 
 ---
 
@@ -167,13 +167,15 @@ Add a new schedule.
 ```json
 {
   "time": "2315",
-  "action": 1
+  "action": 1,
+  "target": 0
 }
 ```
 
 **Parameters:**
 - `time` (string) - Time in HHMM format (0000-2359)
 - `action` (int) - `1` for ON, `0` for OFF
+- `target` (int, optional) - `0` for both outputs, `1` for power jack only, `2` for USB output only
 
 **Response:**
 ```json
@@ -279,8 +281,8 @@ Set timezone.
 # Get status
 curl http://192.168.1.100/api/status
 
-# Turn power ON
-curl -X POST http://192.168.1.100/api/power \
+# Turn power jack ON
+curl -X POST http://192.168.1.100/api/powerjack \
   -H "Content-Type: application/json" \
   -d '{"state":true}'
 
@@ -302,10 +304,10 @@ BASE_URL = "http://192.168.1.100"
 
 # Get status
 status = requests.get(f"{BASE_URL}/api/status").json()
-print(f"Power: {status['power']}")
+print(f"Power: {status['powerJack']}")
 
-# Turn power ON
-requests.post(f"{BASE_URL}/api/power", json={"state": True})
+# Turn power jack ON
+requests.post(f"{BASE_URL}/api/powerjack", json={"state": True})
 
 # Set PD voltage
 requests.post(f"{BASE_URL}/api/pd", json={"voltage": 12})
@@ -335,10 +337,10 @@ const BASE_URL = "http://192.168.1.100";
 // Get status
 fetch(`${BASE_URL}/api/status`)
   .then(r => r.json())
-  .then(data => console.log("Power:", data.power));
+  .then(data => console.log("Power:", data.powerJack));
 
-// Turn power ON
-fetch(`${BASE_URL}/api/power`, {
+// Turn power jack ON
+fetch(`${BASE_URL}/api/powerjack`, {
   method: "POST",
   headers: {"Content-Type": "application/json"},
   body: JSON.stringify({state: true})
@@ -367,10 +369,10 @@ const BASE_URL = "http://192.168.1.100";
 async function controlDevice() {
   // Get status
   const status = await axios.get(`${BASE_URL}/api/status`);
-  console.log("Power:", status.data.power);
+  console.log("Power:", status.data.powerJack);
   
-  // Turn power ON
-  await axios.post(`${BASE_URL}/api/power`, {state: true});
+  // Turn power jack ON
+  await axios.post(`${BASE_URL}/api/powerjack`, {state: true});
   
   // Add schedule
   await axios.post(`${BASE_URL}/api/schedule`, {
@@ -414,9 +416,9 @@ No rate limiting implemented. For production use, consider:
 
 CORS is not configured. The API is intended for same-network access only.
 
-## WebSocket Support
+## Live Updates
 
-Currently not implemented. All updates are poll-based (HTTP requests).
+Live status updates are available via Server-Sent Events at `GET /api/events`. The web UI also polls `/api/status` as a fallback.
 
 ---
 
