@@ -7,6 +7,22 @@
 
 WebServer server(80);
 
+// Read-only dashboard endpoints are accessible from an HTTPS-hosted static
+// page after the browser grants Local Network Access permission. Control
+// endpoints intentionally do not opt in to cross-origin access.
+void addDashboardCorsHeaders() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+  server.sendHeader("Access-Control-Allow-Private-Network", "true");
+  server.sendHeader("Cache-Control", "no-store");
+}
+
+void handleDashboardOptions() {
+  addDashboardCorsHeaders();
+  server.send(204, "text/plain", "");
+}
+
 // ---------------------------------------------------------------------------
 // Web UI (single page)
 // ---------------------------------------------------------------------------
@@ -128,7 +144,10 @@ String buildStatusJson() {
 }
 
 void handleRoot()   { server.send(200, "text/html", INDEX_HTML); }
-void handleStatus() { server.send(200, "application/json", buildStatusJson()); }
+void handleStatus() {
+  addDashboardCorsHeaders();
+  server.send(200, "application/json", buildStatusJson());
+}
 
 void handleDeviceInfo() {
   String json = "{\"protocol\":\"esp-iot/1\",\"id\":\"";
@@ -141,6 +160,7 @@ void handleDeviceInfo() {
   json += hostname;
   json += "\",\"ui\":\"/\",\"status\":\"/api/status\",";
   json += "\"capabilities\":[\"fan-pwm\",\"fan-rpm\"]}";
+  addDashboardCorsHeaders();
   server.send(200, "application/json", json);
 }
 
@@ -223,7 +243,9 @@ void handleSetTimezone() {
 void setupWebServer() {
   server.on("/", HTTP_GET, handleRoot);
   server.on("/api/device", HTTP_GET, handleDeviceInfo);
+  server.on("/api/device", HTTP_OPTIONS, handleDashboardOptions);
   server.on("/api/status", HTTP_GET, handleStatus);
+  server.on("/api/status", HTTP_OPTIONS, handleDashboardOptions);
   server.on("/api/all", HTTP_POST, handleSetAll);
   server.on("/api/wifi", HTTP_POST, handleSetWiFi);
   server.on("/api/timezone", HTTP_POST, handleSetTimezone);

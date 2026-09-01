@@ -11,6 +11,8 @@ An ESP8266-controlled power jack with USB-C PD negotiation, USB data pass-throug
 - **Web UI + REST API** and a **serial command** interface for control and configuration.
 - Persistent state in EEPROM, an NTP-synced clock, and up to 10 schedules.
 - Automatic manager discovery at `iot-switch-<12-digit-MAC>.local` using mDNS.
+- Read-only status access from the optional HTTPS/GitHub Pages dashboard after
+  browser Local Network Access permission.
 
 ## Project Structure
 

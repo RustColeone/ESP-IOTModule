@@ -73,6 +73,8 @@ The PD output feeds a buck-boost converter that regulates whatever the charger p
 - **Three buttons** for quick manual control.
 - Persistent settings (WiFi, timezone, fan speeds) in NVS.
 - Automatic manager discovery at `fan-controller-<12-digit-MAC>.local` using mDNS.
+- Read-only status access from the optional HTTPS/GitHub Pages dashboard after
+  browser Local Network Access permission.
 
 ## Serial Commands
 

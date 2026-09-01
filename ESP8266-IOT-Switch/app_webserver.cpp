@@ -12,6 +12,22 @@ String lastSseSignature = "";
 unsigned long lastSseHeartbeat = 0;
 static const unsigned long SSE_HEARTBEAT_INTERVAL = 10000;
 
+// Read-only dashboard endpoints are accessible from an HTTPS-hosted static
+// page after the browser grants Local Network Access permission. Control
+// endpoints intentionally do not opt in to cross-origin access.
+void addDashboardCorsHeaders() {
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+  server.sendHeader("Access-Control-Allow-Private-Network", "true");
+  server.sendHeader("Cache-Control", "no-store");
+}
+
+void handleDashboardOptions() {
+  addDashboardCorsHeaders();
+  server.send(204, "text/plain", "");
+}
+
 String buildStatusJson() {
   char timeStr[30] = "Not synced";
   if (currentTime > 100000) {
@@ -644,6 +660,7 @@ void handleRoot() {
 }
 
 void handleStatus() {
+  addDashboardCorsHeaders();
   server.send(200, "application/json", buildStatusJson());
 }
 
@@ -658,6 +675,7 @@ void handleDeviceInfo() {
   json += hostname;
   json += "\",\"ui\":\"/\",\"status\":\"/api/status\",";
   json += "\"capabilities\":[\"power-jack\",\"usb-output\",\"pd-voltage\",\"schedules\"]}";
+  addDashboardCorsHeaders();
   server.send(200, "application/json", json);
 }
 
@@ -819,7 +837,9 @@ void handleSetTimezone() {
 void setupWebServer() {
   server.on("/", handleRoot);
   server.on("/api/device",    HTTP_GET,  handleDeviceInfo);
+  server.on("/api/device",    HTTP_OPTIONS, handleDashboardOptions);
   server.on("/api/status",    HTTP_GET,  handleStatus);
+  server.on("/api/status",    HTTP_OPTIONS, handleDashboardOptions);
   server.on("/api/events",    HTTP_GET,  handleEvents);
   server.on("/api/schedules", HTTP_GET,  handleGetSchedules);
   server.on("/api/powerjack", HTTP_POST, handleSetPowerJack);

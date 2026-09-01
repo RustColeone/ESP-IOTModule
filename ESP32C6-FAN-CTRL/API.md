@@ -4,6 +4,14 @@ Base URL: `http://[ESP32C6_IP_ADDRESS]`
 
 No authentication (local network use only).
 
+## Browser dashboard access
+
+`GET /api/device` and `GET /api/status` return read-only CORS headers for the
+optional HTTPS/GitHub Pages dashboard. Their `OPTIONS` preflight routes are also
+supported. Fan, WiFi, and timezone mutation endpoints do not enable
+cross-origin access; the dashboard opens this device's own UI for those
+operations.
+
 ## GET /api/device
 
 Returns stable manager-discovery metadata. The `id` is derived from the full

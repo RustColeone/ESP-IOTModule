@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1512">
+  <title>ESP-IOT Web</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">NO LOCAL SERVER REQUIRED</p>
+        <h1>Your ESP devices,<br>one address away.</h1>
+        <p class="intro">Connect this browser to a device once. Its address stays here, and its controls stay safely on the device.</p>
+      </div>
+      <div class="online-pill"><span id="onlineCount">0</span> online</div>
+    </header>
+
+    <section class="connect-panel" aria-labelledby="connect-title">
+      <div class="panel-copy">
+        <p class="step">ADD A DEVICE</p>
+        <h2 id="connect-title">Enter its local address</h2>
+        <p>Use the <code>.local</code> name printed in the Serial Monitor, or its current LAN IP address.</p>
+      </div>
+      <form id="connectForm">
+        <label for="deviceAddress">Hostname or IP address</label>
+        <div class="input-row">
+          <input id="deviceAddress" name="deviceAddress" required autocomplete="off" spellcheck="false"
+                 placeholder="iot-switch-84f3eba1b2c3.local">
+          <button class="primary" type="submit">Connect device</button>
+        </div>
+        <p id="connectMessage" class="form-message" role="status"></p>
+      </form>
+    </section>
+
+    <section class="section-heading">
+      <div>
+        <p class="step">SAVED IN THIS BROWSER</p>
+        <h2>Devices</h2>
+      </div>
+      <button id="refreshButton" class="quiet" type="button">Refresh status</button>
+    </section>
+
+    <section id="emptyState" class="empty-state">
+      <p>No devices have been added yet.</p>
+      <span>The cloud page cannot enumerate mDNS by itself, so add each device once using the form above.</span>
+    </section>
+    <section id="deviceGrid" class="device-grid" aria-live="polite"></section>
+
+    <details class="help">
+      <summary>Connection requirements and troubleshooting</summary>
+      <div>
+        <p>Your browser and ESP device must be on the same LAN. When asked, allow this site to find and connect to devices on your local network.</p>
+        <p>Current Chrome or Edge is recommended. If a <code>.local</code> address does not resolve, enter the device IP shown in its Serial Monitor. Reflash the updated firmware first so the read-only dashboard endpoints include the required browser headers.</p>
+        <p>Device addresses and aliases are stored only in this browser. They are not uploaded to GitHub or another service.</p>
+      </div>
+    </details>
+  </main>
+
+  <template id="deviceTemplate">
+    <article class="device-card">
+      <div class="card-top">
+        <div>
+          <h3 class="device-name"></h3>
+          <p class="device-model"></p>
+        </div>
+        <span class="device-state"></span>
+      </div>
+      <dl class="device-status"></dl>
+      <div class="device-network">
+        <span class="device-address"></span>
+        <code class="device-id"></code>
+      </div>
+      <div class="card-actions">
+        <button class="rename-button secondary" type="button">Rename</button>
+        <button class="remove-button danger" type="button">Remove</button>
+        <a class="open-button primary" target="_blank" rel="noreferrer">Open controls</a>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

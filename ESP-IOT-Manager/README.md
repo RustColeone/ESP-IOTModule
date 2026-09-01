@@ -4,6 +4,11 @@ A local web dashboard that automatically discovers the ESP devices in this
 repository. Devices advertise `_esp-iot._tcp.local` over mDNS, so DHCP address
 changes do not require any manager configuration.
 
+For users who should not run a local manager, the companion
+[static web dashboard](../docs/README.md) can be hosted on GitHub Pages. It
+requires each device to be added once because ordinary web pages cannot browse
+mDNS.
+
 ## Device identity
 
 Every board derives a stable ID from its full 48-bit Wi-Fi MAC address. The ID,

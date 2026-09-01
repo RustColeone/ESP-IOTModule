@@ -5,6 +5,14 @@ Base URL: `http://[ESP8266_IP_ADDRESS]`
 ## Authentication
 No authentication required (local network only recommended)
 
+## Browser dashboard access
+
+`GET /api/device` and `GET /api/status` return read-only CORS headers for the
+optional HTTPS/GitHub Pages dashboard. Their `OPTIONS` preflight routes are also
+supported. Control, WiFi, timezone, and schedule mutation endpoints do not
+enable cross-origin access; the dashboard opens this device's own UI for those
+operations.
+
 ## Hardware Overview
 - **ESP8266** with dual output control
 - **Power Jack Output**: GPIO15 (HIGH=enable, LOW=disable)
