@@ -1,7 +1,47 @@
 #include "app_network.h"
 #include <WiFi.h>
+#include <ESPmDNS.h>
 #include <time.h>
 #include <stdlib.h>
+
+static bool mdnsStarted = false;
+
+static String compactMacAddress() {
+  String mac = WiFi.macAddress();
+  mac.replace(":", "");
+  mac.toLowerCase();
+  return mac;
+}
+
+String getDeviceId() {
+  return "esp32c6-" + compactMacAddress();
+}
+
+String getDeviceHostname() {
+  String mac = compactMacAddress();
+  return "fan-controller-" + mac;
+}
+
+void startDeviceDiscovery() {
+  if (mdnsStarted || WiFi.status() != WL_CONNECTED) return;
+
+  String hostname = getDeviceHostname();
+  if (!MDNS.begin(hostname.c_str())) {
+    Serial.println(F("mDNS responder failed to start."));
+    return;
+  }
+
+  MDNS.addService("esp-iot", "tcp", 80);
+  MDNS.addServiceTxt("esp-iot", "tcp", "id", getDeviceId());
+  MDNS.addServiceTxt("esp-iot", "tcp", "type", "fan-controller");
+  MDNS.addServiceTxt("esp-iot", "tcp", "model", "ESP32C6-FAN-CTRL");
+  MDNS.addServiceTxt("esp-iot", "tcp", "api", "1");
+  mdnsStarted = true;
+
+  Serial.print(F("Device discovery: http://"));
+  Serial.print(hostname);
+  Serial.println(F(".local"));
+}
 
 void connectWiFi() {
   if (strlen(config.ssid) == 0) {
@@ -27,6 +67,7 @@ void connectWiFi() {
     Serial.println();
     Serial.print(F("WiFi connected. IP: "));
     Serial.println(WiFi.localIP());
+    startDeviceDiscovery();
     updateTime();
   } else {
     wifiConnected = false;

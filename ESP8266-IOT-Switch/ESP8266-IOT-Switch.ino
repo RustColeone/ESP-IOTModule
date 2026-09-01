@@ -138,6 +138,7 @@ void loop() {
   
   // Handle web clients
   if (wifiConnected) {
+    handleDeviceDiscovery();
     handleWebClient();
   }
   

@@ -130,6 +130,20 @@ String buildStatusJson() {
 void handleRoot()   { server.send(200, "text/html", INDEX_HTML); }
 void handleStatus() { server.send(200, "application/json", buildStatusJson()); }
 
+void handleDeviceInfo() {
+  String json = "{\"protocol\":\"esp-iot/1\",\"id\":\"";
+  json += getDeviceId();
+  json += "\",\"name\":\"Fan Controller ";
+  String hostname = getDeviceHostname();
+  json += hostname.substring(hostname.length() - 6);
+  json += "\",\"type\":\"fan-controller\",\"model\":\"ESP32C6-FAN-CTRL\",";
+  json += "\"firmware\":\"1.0\",\"hostname\":\"";
+  json += hostname;
+  json += "\",\"ui\":\"/\",\"status\":\"/api/status\",";
+  json += "\"capabilities\":[\"fan-pwm\",\"fan-rpm\"]}";
+  server.send(200, "application/json", json);
+}
+
 void handleSetFan() {
   // URI is "/api/fan/<index>" — parse the index from the path instead of
   // using UriBraces (not available on all WebServer library versions).
@@ -208,6 +222,7 @@ void handleSetTimezone() {
 
 void setupWebServer() {
   server.on("/", HTTP_GET, handleRoot);
+  server.on("/api/device", HTTP_GET, handleDeviceInfo);
   server.on("/api/status", HTTP_GET, handleStatus);
   server.on("/api/all", HTTP_POST, handleSetAll);
   server.on("/api/wifi", HTTP_POST, handleSetWiFi);

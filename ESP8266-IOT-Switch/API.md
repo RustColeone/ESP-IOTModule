@@ -22,6 +22,27 @@ Returns the web UI HTML page.
 
 ---
 
+### GET /api/device
+
+Returns stable manager-discovery metadata. The `id` is derived from the full
+Wi-Fi MAC address and remains stable across reboots, reflashing, and DHCP
+address changes.
+
+```json
+{
+  "protocol": "esp-iot/1",
+  "id": "esp8266-84f3eba1b2c3",
+  "name": "Power Switch a1b2c3",
+  "type": "power-switch",
+  "model": "ESP8266-IOT-Switch",
+  "firmware": "3.1",
+  "hostname": "iot-switch-84f3eba1b2c3",
+  "ui": "/",
+  "status": "/api/status",
+  "capabilities": ["power-jack", "usb-output", "pd-voltage", "schedules"]
+}
+```
+
 ### GET /api/status
 Get current system status.
 

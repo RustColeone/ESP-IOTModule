@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ESP-IOT Manager</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">LOCAL DEVICE DISCOVERY</p>
+        <h1>ESP-IOT Manager</h1>
+        <p class="subtitle">Every controller on your network, without remembering an IP address.</p>
+      </div>
+      <div class="summary"><span id="onlineCount">0</span> online</div>
+    </header>
+
+    <section id="notice" class="notice">Searching for ESP-IOT devices on this network…</section>
+    <section id="devices" class="device-grid" aria-live="polite"></section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

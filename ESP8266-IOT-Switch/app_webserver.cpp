@@ -647,6 +647,20 @@ void handleStatus() {
   server.send(200, "application/json", buildStatusJson());
 }
 
+void handleDeviceInfo() {
+  String json = "{\"protocol\":\"esp-iot/1\",\"id\":\"";
+  json += getDeviceId();
+  json += "\",\"name\":\"Power Switch ";
+  String hostname = getDeviceHostname();
+  json += hostname.substring(hostname.length() - 6);
+  json += "\",\"type\":\"power-switch\",\"model\":\"ESP8266-IOT-Switch\",";
+  json += "\"firmware\":\"3.1\",\"hostname\":\"";
+  json += hostname;
+  json += "\",\"ui\":\"/\",\"status\":\"/api/status\",";
+  json += "\"capabilities\":[\"power-jack\",\"usb-output\",\"pd-voltage\",\"schedules\"]}";
+  server.send(200, "application/json", json);
+}
+
 void handleGetSchedules() {
   char json[640];
   int pos = snprintf(json, sizeof(json), "{\"schedules\":[");
@@ -804,6 +818,7 @@ void handleSetTimezone() {
 
 void setupWebServer() {
   server.on("/", handleRoot);
+  server.on("/api/device",    HTTP_GET,  handleDeviceInfo);
   server.on("/api/status",    HTTP_GET,  handleStatus);
   server.on("/api/events",    HTTP_GET,  handleEvents);
   server.on("/api/schedules", HTTP_GET,  handleGetSchedules);

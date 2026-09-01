@@ -1,7 +1,51 @@
 #include "app_network.h"
 #include "storage.h"
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 #include <time.h>
+
+static bool mdnsStarted = false;
+
+static String compactMacAddress() {
+  String mac = WiFi.macAddress();
+  mac.replace(":", "");
+  mac.toLowerCase();
+  return mac;
+}
+
+String getDeviceId() {
+  return "esp8266-" + compactMacAddress();
+}
+
+String getDeviceHostname() {
+  String mac = compactMacAddress();
+  return "iot-switch-" + mac;
+}
+
+void startDeviceDiscovery() {
+  if (mdnsStarted || WiFi.status() != WL_CONNECTED) return;
+
+  String hostname = getDeviceHostname();
+  if (!MDNS.begin(hostname.c_str())) {
+    Serial.println(F("mDNS responder failed to start."));
+    return;
+  }
+
+  MDNS.addService("esp-iot", "tcp", 80);
+  MDNS.addServiceTxt("esp-iot", "tcp", "id", getDeviceId());
+  MDNS.addServiceTxt("esp-iot", "tcp", "type", "power-switch");
+  MDNS.addServiceTxt("esp-iot", "tcp", "model", "ESP8266-IOT-Switch");
+  MDNS.addServiceTxt("esp-iot", "tcp", "api", "1");
+  mdnsStarted = true;
+
+  Serial.print(F("Device discovery: http://"));
+  Serial.print(hostname);
+  Serial.println(F(".local"));
+}
+
+void handleDeviceDiscovery() {
+  if (mdnsStarted) MDNS.update();
+}
 
 void connectWiFi() {
   if (strlen(config.ssid) == 0) {
@@ -27,6 +71,7 @@ void connectWiFi() {
     Serial.println(F("\nWiFi connected!"));
     Serial.print(F("IP address: "));
     Serial.println(WiFi.localIP());
+    startDeviceDiscovery();
     updateTime();
   } else {
     wifiConnected = false;

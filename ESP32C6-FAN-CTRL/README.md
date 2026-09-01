@@ -72,6 +72,7 @@ The PD output feeds a buck-boost converter that regulates whatever the charger p
 - **Serial commands** over USB @ 115200 baud.
 - **Three buttons** for quick manual control.
 - Persistent settings (WiFi, timezone, fan speeds) in NVS.
+- Automatic manager discovery at `fan-controller-<12-digit-MAC>.local` using mDNS.
 
 ## Serial Commands
 
@@ -89,6 +90,7 @@ The PD output feeds a buck-boost converter that regulates whatever the charger p
 | Method | Endpoint | Body |
 |--------|----------|------|
 | GET | `/api/status` | — |
+| GET | `/api/device` | — |
 | POST | `/api/fan/{0-3}` | `{"speed": 0-100}` |
 | POST | `/api/all` | `{"speed": 0-100}` |
 | POST | `/api/wifi` | `{"ssid":"...","password":"..."}` |

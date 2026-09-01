@@ -10,6 +10,7 @@ An ESP8266-controlled power jack with USB-C PD negotiation, USB data pass-throug
 - **VBUS voltage monitoring** via the ESP8266 ADC (A0).
 - **Web UI + REST API** and a **serial command** interface for control and configuration.
 - Persistent state in EEPROM, an NTP-synced clock, and up to 10 schedules.
+- Automatic manager discovery at `iot-switch-<12-digit-MAC>.local` using mDNS.
 
 ## Project Structure
 
@@ -68,6 +69,7 @@ All commands available via Serial @ 115200 baud:
 
 ### GET
 - `GET /` — web UI
+- `GET /api/device` — stable identity and manager-discovery metadata
 - `GET /api/status` — system status JSON
 - `GET /api/events` — Server-Sent Events stream for live status
 - `GET /api/schedules` — list schedules

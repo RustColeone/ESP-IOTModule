@@ -4,6 +4,27 @@ Base URL: `http://[ESP32C6_IP_ADDRESS]`
 
 No authentication (local network use only).
 
+## GET /api/device
+
+Returns stable manager-discovery metadata. The `id` is derived from the full
+Wi-Fi MAC address and remains stable across reboots, reflashing, and DHCP
+address changes.
+
+```json
+{
+  "protocol": "esp-iot/1",
+  "id": "esp32c6-84f3eba1b2c3",
+  "name": "Fan Controller a1b2c3",
+  "type": "fan-controller",
+  "model": "ESP32C6-FAN-CTRL",
+  "firmware": "1.0",
+  "hostname": "fan-controller-84f3eba1b2c3",
+  "ui": "/",
+  "status": "/api/status",
+  "capabilities": ["fan-pwm", "fan-rpm"]
+}
+```
+
 ## GET /api/status
 
 Get current status for all fans and the device.

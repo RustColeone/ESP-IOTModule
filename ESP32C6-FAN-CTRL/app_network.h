@@ -5,5 +5,8 @@
 
 void connectWiFi();
 void updateTime();
+void startDeviceDiscovery();
+String getDeviceId();
+String getDeviceHostname();
 
 #endif
