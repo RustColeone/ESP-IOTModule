@@ -151,6 +151,7 @@ void handleStatus() {
 
 void handleDeviceInfo() {
   String json = "{\"protocol\":\"esp-iot/1\",\"id\":\"";
+  json.reserve(1800);
   json += getDeviceId();
   json += "\",\"name\":\"Fan Controller ";
   String hostname = getDeviceHostname();
@@ -159,7 +160,21 @@ void handleDeviceInfo() {
   json += "\"firmware\":\"1.0\",\"hostname\":\"";
   json += hostname;
   json += "\",\"ui\":\"/\",\"status\":\"/api/status\",";
-  json += "\"capabilities\":[\"fan-pwm\",\"fan-rpm\"]}";
+  json += "\"capabilities\":[\"fan-pwm\",\"fan-rpm\"],\"controls\":[";
+  for (int i = 0; i < FAN_COUNT; i++) {
+    if (i > 0) json += ',';
+    json += "{\"id\":\"fan";
+    json += String(i);
+    json += "\",\"label\":\"Fan ";
+    json += String(i + 1);
+    json += "\",\"type\":\"range\",\"statePath\":\"fans.";
+    json += String(i);
+    json += ".speed\",\"method\":\"POST\",\"endpoint\":\"/api/fan/";
+    json += String(i);
+    json += "\",";
+    json += "\"valueField\":\"speed\",\"min\":0,\"max\":100,\"step\":1,\"unit\":\"%\"}";
+  }
+  json += "]}";
   addDashboardCorsHeaders();
   server.send(200, "application/json", json);
 }

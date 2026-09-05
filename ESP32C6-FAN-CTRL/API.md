@@ -29,9 +29,26 @@ address changes.
   "hostname": "fan-controller-84f3eba1b2c3",
   "ui": "/",
   "status": "/api/status",
-  "capabilities": ["fan-pwm", "fan-rpm"]
+  "capabilities": ["fan-pwm", "fan-rpm"],
+  "controls": [
+    {
+      "id": "fan0",
+      "label": "Fan 1",
+      "type": "range",
+      "statePath": "fans.0.speed",
+      "method": "POST",
+      "endpoint": "/api/fan/0",
+      "valueField": "speed",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "%"
+    }
+  ]
 }
 ```
+
+The response contains one range control for each fan (`fan0` through `fan3`).
 
 ## GET /api/status
 

@@ -17,6 +17,21 @@
       <div class="summary"><span id="onlineCount">0</span> online</div>
     </header>
 
+    <section id="detailPanel" class="detail-panel" hidden>
+      <div class="detail-header">
+        <div>
+          <p class="eyebrow">DEVICE CONTROLS</p>
+          <h2 id="detailTitle">Device</h2>
+        </div>
+        <div class="detail-actions">
+          <a id="openDirect" class="secondary-link">Open directly</a>
+          <button id="closeDetail" class="icon-button" type="button" aria-label="Close device controls">×</button>
+        </div>
+      </div>
+      <iframe id="detailFrame" title="Device controls" referrerpolicy="no-referrer"
+              sandbox="allow-forms allow-same-origin allow-scripts"></iframe>
+    </section>
+
     <section id="notice" class="notice">Searching for ESP-IOT devices on this network…</section>
     <section id="devices" class="device-grid" aria-live="polite"></section>
   </main>

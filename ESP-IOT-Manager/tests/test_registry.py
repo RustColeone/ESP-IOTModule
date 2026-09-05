@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from iot_manager.registry import DeviceRegistry
+from iot_manager.registry import DeviceRegistry, InvalidControlValueError
 
 
 class DeviceRegistryTests(unittest.TestCase):
@@ -61,6 +61,63 @@ class DeviceRegistryTests(unittest.TestCase):
         device = self.registry.snapshot()[0]
         self.assertTrue(device["online"])
         self.assertTrue(device["status_data"]["powerJack"])
+
+    @patch.object(DeviceRegistry, "_get_json")
+    def test_toggle_control_uses_advertised_endpoint(self, get_json):
+        get_json.side_effect = [
+            {
+                "id": "esp8266-aabbccddeeff",
+                "controls": [
+                    {
+                        "id": "powerJack",
+                        "type": "toggle",
+                        "endpoint": "/api/powerjack",
+                        "valueField": "state",
+                    }
+                ],
+            },
+            {"powerJack": False},
+        ]
+        self.registry.poll()
+
+        with patch.object(DeviceRegistry, "_post_json", return_value={"success": True}) as post:
+            get_json.side_effect = None
+            get_json.return_value = {"powerJack": True}
+            result = self.registry.apply_control(
+                "esp8266-aabbccddeeff",
+                "powerJack",
+                True,
+            )
+
+        post.assert_called_once_with(
+            "http://192.168.1.20:80/api/powerjack",
+            {"state": True},
+        )
+        self.assertTrue(result["deviceStatus"]["powerJack"])
+        self.assertTrue(self.registry.snapshot()[0]["status_data"]["powerJack"])
+
+    @patch.object(DeviceRegistry, "_get_json")
+    def test_range_control_rejects_out_of_range_value(self, get_json):
+        get_json.side_effect = [
+            {
+                "id": "esp8266-aabbccddeeff",
+                "controls": [
+                    {
+                        "id": "fan0",
+                        "type": "range",
+                        "endpoint": "/api/fan/0",
+                        "valueField": "speed",
+                        "min": 0,
+                        "max": 100,
+                    }
+                ],
+            },
+            {"fans": [{"speed": 0, "rpm": 0}]},
+        ]
+        self.registry.poll()
+
+        with self.assertRaises(InvalidControlValueError):
+            self.registry.apply_control("esp8266-aabbccddeeff", "fan0", 101)
 
 
 if __name__ == "__main__":

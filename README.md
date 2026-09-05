@@ -62,6 +62,10 @@ ESP-IOTModule/
 The web dashboard reads identity and status only. Device controls remain on the
 device-hosted page opened by the dashboard.
 
+The local manager also renders the simple controls advertised by each device:
+power-switch toggles and fan-speed sliders. Full configuration is available in
+an embedded, dismissible device panel or by navigating directly to the device.
+
 ## Conventions
 
 - Each firmware folder has one Arduino sketch whose `.ino` filename matches the folder name.

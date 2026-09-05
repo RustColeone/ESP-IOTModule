@@ -47,7 +47,27 @@ address changes.
   "hostname": "iot-switch-84f3eba1b2c3",
   "ui": "/",
   "status": "/api/status",
-  "capabilities": ["power-jack", "usb-output", "pd-voltage", "schedules"]
+  "capabilities": ["power-jack", "usb-output", "pd-voltage", "schedules"],
+  "controls": [
+    {
+      "id": "powerJack",
+      "label": "Power Jack",
+      "type": "toggle",
+      "statePath": "powerJack",
+      "method": "POST",
+      "endpoint": "/api/powerjack",
+      "valueField": "state"
+    },
+    {
+      "id": "usbOutput",
+      "label": "USB Output",
+      "type": "toggle",
+      "statePath": "usbOutput",
+      "method": "POST",
+      "endpoint": "/api/usboutput",
+      "valueField": "state"
+    }
+  ]
 }
 ```
 

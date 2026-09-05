@@ -25,6 +25,23 @@ short six-digit suffix is used only in the default display name. Friendly
 aliases are stored in `data/devices.json` by the manager and do not consume
 device EEPROM/NVS.
 
+## Quick controls and embedded details
+
+Devices advertise their simple controls in `GET /api/device`. The manager
+currently renders two generic control types:
+
+- `toggle` sends a boolean value, used by the power jack and USB output.
+- `range` sends a bounded numeric value, used by each fan speed slider.
+
+The browser sends changes to the local manager, which validates the advertised
+control ID, type, range, endpoint, and JSON field before forwarding the request
+to that device. Browser code cannot provide an arbitrary URL for the proxy.
+
+**Open controls** embeds the device's existing UI in a dismissible detail panel.
+**Open directly** navigates the current tab to the device if the embedded view
+is inconvenient. Cross-origin iframe rules prevent the manager from inspecting
+the device page, but do not prevent the page from operating its own API.
+
 ## Requirements
 
 - Python 3.10 or newer
@@ -64,11 +81,31 @@ TXT:     id, type, model, api
 ```
 
 It also exposes `GET /api/device` with common metadata. Device-specific live
-state remains at `GET /api/status`.
+state remains at `GET /api/status`. The optional `controls` array is the simple
+control handshake:
+
+```json
+{
+  "controls": [
+    {
+      "id": "powerJack",
+      "label": "Power Jack",
+      "type": "toggle",
+      "statePath": "powerJack",
+      "method": "POST",
+      "endpoint": "/api/powerjack",
+      "valueField": "state"
+    }
+  ]
+}
+```
+
+Range controls additionally declare `min`, `max`, `step`, and `unit`. Paths in
+`statePath` use dot notation, including array indexes such as `fans.0.speed`.
 
 ## Tests
 
-The registry tests use only Python's standard library:
+The manager tests use only Python's standard library:
 
 ```powershell
 python -m unittest discover -s tests -v

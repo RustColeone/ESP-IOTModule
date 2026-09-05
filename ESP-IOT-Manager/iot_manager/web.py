@@ -7,7 +7,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from .registry import DeviceRegistry
+from .registry import (
+    ControlNotFoundError,
+    DeviceNotFoundError,
+    DeviceRegistry,
+    InvalidControlValueError,
+)
 
 
 class DashboardServer(ThreadingHTTPServer):
@@ -60,15 +65,27 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
         path = urlparse(self.path).path
         prefix = "/api/devices/"
-        suffix = "/alias"
-        if not (path.startswith(prefix) and path.endswith(suffix)):
+        if not path.startswith(prefix):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
 
-        device_id = unquote(path[len(prefix) : -len(suffix)])
+        control_marker = "/controls/"
+        remainder = path[len(prefix) :]
+        if control_marker in remainder:
+            encoded_device_id, encoded_control_id = remainder.split(control_marker, 1)
+            self._handle_control(
+                unquote(encoded_device_id),
+                unquote(encoded_control_id),
+            )
+            return
+
+        suffix = "/alias"
+        if not remainder.endswith(suffix):
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        device_id = unquote(remainder[: -len(suffix)])
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            payload = self._read_json_body()
             alias = payload.get("alias", "")
             if not isinstance(alias, str):
                 raise ValueError
@@ -80,6 +97,39 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "Unknown device"}, HTTPStatus.NOT_FOUND)
             return
         self._send_json({"ok": True})
+
+    def _read_json_body(self) -> dict:
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0 or length > 4096:
+            raise ValueError("Invalid request body size")
+        payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError
+        return payload
+
+    def _handle_control(self, device_id: str, control_id: str) -> None:
+        try:
+            payload = self._read_json_body()
+            if "value" not in payload:
+                raise InvalidControlValueError("Missing control value")
+            result = self.server.registry.apply_control(
+                device_id,
+                control_id,
+                payload["value"],
+            )
+        except ValueError as error:
+            self._send_json({"error": str(error) or "Invalid request"}, HTTPStatus.BAD_REQUEST)
+            return
+        except (DeviceNotFoundError, ControlNotFoundError) as error:
+            self._send_json({"error": str(error)}, HTTPStatus.NOT_FOUND)
+            return
+        except OSError as error:
+            self._send_json(
+                {"error": f"Device request failed: {error}"},
+                HTTPStatus.BAD_GATEWAY,
+            )
+            return
+        self._send_json({"ok": True, **result})
 
     def log_message(self, format: str, *args: object) -> None:
         if self.path != "/api/devices":

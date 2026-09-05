@@ -1,11 +1,24 @@
 from __future__ import annotations
 
 import json
+import math
 import threading
 import time
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+
+class DeviceNotFoundError(LookupError):
+    pass
+
+
+class ControlNotFoundError(LookupError):
+    pass
+
+
+class InvalidControlValueError(ValueError):
+    pass
 
 
 class DeviceRegistry:
@@ -93,6 +106,119 @@ class DeviceRegistry:
             if not isinstance(payload, dict):
                 raise ValueError("Expected a JSON object")
             return payload
+
+    @staticmethod
+    def _post_json(url: str, payload: dict[str, Any], timeout: float = 2.0) -> dict[str, Any]:
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload, separators=(",", ":")).encode("utf-8"),
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "User-Agent": "ESP-IOT-Manager/1",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            if not 200 <= response.status < 300:
+                raise OSError(f"HTTP {response.status}")
+            body = response.read()
+            if not body:
+                return {}
+            result = json.loads(body.decode("utf-8"))
+            if not isinstance(result, dict):
+                raise ValueError("Expected a JSON object")
+            return result
+
+    @staticmethod
+    def _control_payload(control: dict[str, Any], value: Any) -> dict[str, Any]:
+        control_type = control.get("type")
+        if control_type == "toggle":
+            if not isinstance(value, bool):
+                raise InvalidControlValueError("Toggle controls require a boolean value")
+        elif control_type == "range":
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise InvalidControlValueError("Range controls require a numeric value")
+            minimum = control.get("min", 0)
+            maximum = control.get("max", 100)
+            if (
+                isinstance(minimum, bool)
+                or isinstance(maximum, bool)
+                or not isinstance(minimum, (int, float))
+                or not isinstance(maximum, (int, float))
+                or (isinstance(minimum, float) and not math.isfinite(minimum))
+                or (isinstance(maximum, float) and not math.isfinite(maximum))
+                or (isinstance(value, float) and not math.isfinite(value))
+            ):
+                raise InvalidControlValueError("Invalid range definition or value")
+            if value < minimum or value > maximum:
+                raise InvalidControlValueError(
+                    f"Value must be between {minimum} and {maximum}"
+                )
+            if isinstance(value, float) and value.is_integer():
+                value = int(value)
+        else:
+            raise InvalidControlValueError("Unsupported control type")
+
+        field = control.get("valueField")
+        if not isinstance(field, str) or not field.isidentifier():
+            raise InvalidControlValueError("Invalid control value field")
+        return {field: value}
+
+    def apply_control(self, device_id: str, control_id: str, value: Any) -> dict[str, Any]:
+        with self._lock:
+            stored = self._devices.get(device_id)
+            if stored is None:
+                raise DeviceNotFoundError("Unknown device")
+            device = dict(stored)
+            controls = device.get("controls", [])
+
+        control = next(
+            (
+                item
+                for item in controls
+                if isinstance(item, dict) and item.get("id") == control_id
+            ),
+            None,
+        )
+        if control is None:
+            raise ControlNotFoundError("Unknown control")
+        if control.get("method", "POST") != "POST":
+            raise InvalidControlValueError("Unsupported control method")
+
+        endpoint = control.get("endpoint")
+        if (
+            not isinstance(endpoint, str)
+            or not endpoint.startswith("/")
+            or endpoint.startswith("//")
+            or "://" in endpoint
+        ):
+            raise InvalidControlValueError("Invalid control endpoint")
+
+        payload = self._control_payload(control, value)
+        base_url = f"http://{device['address']}:{device['port']}"
+        response = self._post_json(base_url + endpoint, payload)
+
+        status_path = device.get("status", "/api/status")
+        result = {"deviceResponse": response}
+        if (
+            not isinstance(status_path, str)
+            or not status_path.startswith("/")
+            or status_path.startswith("//")
+            or "://" in status_path
+        ):
+            return result
+        try:
+            status = self._get_json(base_url + status_path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            return result
+        with self._lock:
+            current = self._devices.get(device_id)
+            if current is not None:
+                current["status_data"] = status
+                current["last_seen"] = time.time()
+        result["deviceStatus"] = status
+        return result
 
     def poll(self) -> None:
         with self._lock:

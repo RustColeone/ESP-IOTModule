@@ -666,6 +666,7 @@ void handleStatus() {
 
 void handleDeviceInfo() {
   String json = "{\"protocol\":\"esp-iot/1\",\"id\":\"";
+  json.reserve(1024);
   json += getDeviceId();
   json += "\",\"name\":\"Power Switch ";
   String hostname = getDeviceHostname();
@@ -674,7 +675,12 @@ void handleDeviceInfo() {
   json += "\"firmware\":\"3.1\",\"hostname\":\"";
   json += hostname;
   json += "\",\"ui\":\"/\",\"status\":\"/api/status\",";
-  json += "\"capabilities\":[\"power-jack\",\"usb-output\",\"pd-voltage\",\"schedules\"]}";
+  json += "\"capabilities\":[\"power-jack\",\"usb-output\",\"pd-voltage\",\"schedules\"],";
+  json += "\"controls\":[";
+  json += "{\"id\":\"powerJack\",\"label\":\"Power Jack\",\"type\":\"toggle\",";
+  json += "\"statePath\":\"powerJack\",\"method\":\"POST\",\"endpoint\":\"/api/powerjack\",\"valueField\":\"state\"},";
+  json += "{\"id\":\"usbOutput\",\"label\":\"USB Output\",\"type\":\"toggle\",";
+  json += "\"statePath\":\"usbOutput\",\"method\":\"POST\",\"endpoint\":\"/api/usboutput\",\"valueField\":\"state\"}]}";
   addDashboardCorsHeaders();
   server.send(200, "application/json", json);
 }
