@@ -20,7 +20,7 @@ def poll_forever(registry: DeviceRegistry, stop: threading.Event) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Discover and manage ESP-IOT devices")
     parser.add_argument("--host", default="127.0.0.1", help="dashboard bind address")
-    parser.add_argument("--port", default=8080, type=int, help="dashboard port")
+    parser.add_argument("--port", default=5050, type=int, help="dashboard port")
     args = parser.parse_args()
 
     registry = DeviceRegistry(ROOT / "data" / "devices.json")
